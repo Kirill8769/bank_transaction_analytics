@@ -1,24 +1,194 @@
-import logging.config
+import json
 import os
+import re
 from datetime import datetime
 
+import pandas as pd
+import requests
+from dotenv import load_dotenv
 
-def my_logger():
-    log_file = os.path.join("!=log_config.ini")
-    if os.path.isfile(log_file):
-        logging.config.fileConfig(log_file)
-        my_logger = logging.getLogger("my_logger")
+from config import path_project
+from loggers import logger
+
+load_dotenv()
+API_MARKETSTACK = os.getenv("API_MARKETSTACK")
+
+
+def get_range_dates(user_date: str) -> tuple[datetime | None, datetime | None]:
+    """
+    Преобразует строку с датой в формат datetime и возвращает начальную и конечную даты для заданного месяца.
+
+    :param user_date: Строка с датой в формате YYYY-MM-DD HH:MM:SS.
+    :return: Кортеж из двух дат: начальной и конечной.
+    :raises TypeError: Если передан неверный тип данных в user_date (ожидается str).
+    :raises ValueError: Если передана неверная форма даты (ожидается YYYY-MM-DD HH:MM:SS).
+    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
+    """
+    start_date = None
+    end_date = None
+    try:
+        if not isinstance(user_date, str):
+            raise TypeError("Передан неверный тип данных, ожидается str")
+        pattern = re.compile(r"\b\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\b")
+        date_str = pattern.search(user_date)
+        if not date_str:
+            raise ValueError("Передан неверный формат даты, ожидается YYYY-MM-DD HH:MM:SS")
+        end_date = datetime.strptime(date_str[0], "%Y-%m-%d %H:%M:%S")
+        start_date = datetime(end_date.year, end_date.month, 1)
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return start_date, end_date
+
+
+def get_time_of_day() -> str:
+    """
+    Фунция вычисляет какое сейчас время суток и формирует
+    приветственное сообщение
+
+    :return: Приветственное сообщение
+    """
+    datetime_now = datetime.today()
+    if datetime_now.hour >= 18:
+        message = "Добрый вечер"
+    elif datetime_now.hour >= 12:
+        message = "Добрый день"
+    elif datetime_now.hour >= 6:
+        message = "Доброе утро"
     else:
-        my_logger = logging.getLogger("logger")
-        my_logger.setLevel("DEBUG")
-        log_name = os.path.join("logs", f'log_{datetime.today().strftime("%d_%m_%Y")}.log')
-        file_handler = logging.FileHandler(filename=log_name, mode="a", encoding="UTF-8")
-        file_formatter = logging.Formatter(
-            "[%(asctime)s] %(levelname)s %(filename)s-%(funcName)s: %(message)s", datefmt="%d.%m.%Y-%H:%M:%S"
-        )
-        file_handler.setFormatter(file_formatter)
-        my_logger.addHandler(file_handler)
-    return my_logger
-    
+        message = "Доброй ночи"
+    return message
 
-logger = my_logger()
+
+def get_operations(start_date: datetime, end_date: datetime) -> tuple[pd.DataFrame | None, pd.Series | None]:
+    """
+    Получает операции пользователя из файла, в заданном временном интервале.
+
+    :param start_date: Начальная дата временного интервала.
+    :param end_date: Конечная дата временного интервала.
+    :return: Кортеж из двух элементов: DataFrame с топ-5 транзакциями и Series с общей суммой платежей по картам.
+    :raises TypeError: Если start_date или end_date не являются объектами datetime.
+    :raises ValueError: Если файл с операциями не найден или если возникли проблемы с фильтрацией данных.
+    """
+    result = (None, None)
+    try:
+        if not isinstance(start_date, datetime) or not isinstance(end_date, datetime):
+            raise TypeError("Ожидаются две даты формата с типом данных datetime")
+        file_operations = os.path.join(path_project, "data", "operations.xls")
+        if not os.path.isfile(file_operations):
+            raise ValueError("Файл с операциями пользователя не найден")
+        df = pd.read_excel(file_operations)
+        df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
+        filter_by_date: pd.DataFrame = df[
+            (df["Дата операции"] >= start_date) & (df["Дата операции"] <= end_date) & (df["Сумма платежа"] < 0)
+        ]
+        top_transactions = filter_by_date.sort_values(by="Сумма платежа", ascending=True).head(5)
+        group_num_cards = filter_by_date.groupby(filter_by_date["Номер карты"])
+        sum_pay_cards = group_num_cards["Сумма платежа"].sum()
+        result = (top_transactions, sum_pay_cards)
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return result
+
+
+def get_tickers_dicts() -> tuple[dict[str, float] | None, dict[str, float] | None]:
+    """
+    Получает тикеры валют и акций из файла пользовательских настроек,
+    с ними обращается к функциям для получения текущей цены на перечисленные
+    акции и валюты
+
+    :return: Кортеж с двумя словарями: с полученными курсами валют и ценами акций.
+    :raises ValueError: Если файл с настройками пользователя не найден.
+    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
+    """
+    result = (None, None)
+    try:
+        settings_file = os.path.join(path_project, "user_settings.json")
+        if not os.path.isfile(settings_file):
+            raise ValueError("Файл с операциями пользователя не найден")
+        with open(settings_file, encoding="UTF-8") as file:
+            user_settings = json.load(file)
+        tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
+        currencies_result = get_price_currencies(tickers_currencies)
+        tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}
+        stocks_result = get_price_stocks(tickers_stocks)
+        result = (currencies_result, stocks_result)
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return result
+
+
+def get_price_stocks(user_stocks: dict[str, int]) -> dict[str, float]:
+    """
+    Получает текущие цены акций из S&P 500.
+
+    :param user_stocks: Словарь с тикерами акций и начальными значениями цен.
+    :return: Словарь с обновленными ценами акций.
+    :raises TypeError: Если user_stocks не является словарем с тикерами акций и начальными значениями цен.
+    :raises ConnectionError: Если возникает ошибка подключения к API для получения цен акций.
+    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
+    """
+    try:
+        if not isinstance(user_stocks, dict):
+            raise TypeError("Передан неверный формат, ожидается словарь с акциями")
+        if user_stocks:
+            symbols = ",".join(user_stocks.keys())
+            params = {"access_key": API_MARKETSTACK, "symbols": symbols}
+            url = "http://api.marketstack.com/v1/intraday/latest"
+            response = requests.get(url, params)
+            if not response.status_code == 200:
+                raise ConnectionError("Ошибка подключения")
+            json_data = response.json()
+            for stock in json_data["data"]:
+                user_stocks[stock["symbol"]] = stock["last"]
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ConnectionError as conn_ex:
+        logger.error(f"{conn_ex.__class__.__name__}: {conn_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return user_stocks
+
+
+def get_price_currencies(user_currencies: dict[str, int]) -> dict[str, float]:
+    """
+    Получает текущие курсы валют.
+
+    :param user_currencies: Словарь с кодами валют и начальными значениями курсов.
+    :return: Словарь с обновленными курсами валют.
+    :raises TypeError: Если user_currencies не является словарем с кодами валют и начальными значениями курсов.
+    :raises ConnectionError: Если возникает ошибка подключения к API для получения курсов валют.
+    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
+    """
+    try:
+        if not isinstance(user_currencies, dict):
+            raise TypeError("Передан неверный формат, ожидается словарь с валютами")
+        if user_currencies:
+            url = "https://www.cbr-xml-daily.ru/daily_json.js"
+            response = requests.get(url)
+            if not response.status_code == 200:
+                raise ConnectionError("Ошибка подключения")
+            currency_info = response.json()
+            for currency in user_currencies:
+                user_currencies[currency] = currency_info["Valute"][currency]["Value"]
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ConnectionError as conn_ex:
+        logger.error(f"{conn_ex.__class__.__name__}: {conn_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return user_currencies
