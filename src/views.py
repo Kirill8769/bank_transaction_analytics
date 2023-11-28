@@ -13,7 +13,9 @@ load_dotenv()
 API_MARKETSTACK = os.getenv("API_MARKETSTACK")
 
 
-def get_range_dates(user_date: str):
+
+
+def get_range_dates(user_date: str): # USED
     start_date = None
     end_date = None
     try:
@@ -36,17 +38,53 @@ def get_range_dates(user_date: str):
 
 
 
-def get_tickers_dict():
-    settings_path = os.path.join("user_settings.json")
-    if os.path.isfile(settings_path):
-        with open(settings_path, encoding="UTF-8") as file:
-            user_settings = json.load(file)
-        tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
-        tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}
-        return tickers_currencies, tickers_stocks
+def get_time_of_day() -> str: # USED
+    datetime_now = datetime.today()
+    if datetime_now.hour >= 18:
+        message = "Добрый вечер"
+    elif datetime_now.hour >= 12:
+        message = "Добрый день"
+    elif datetime_now.hour >= 6:
+        message = "Доброе утро"
     else:
-        print("tickers error")
-        return None, None
+        message = "Доброй ночи"
+    return message
+
+
+
+def get_operations(start_date, end_date):
+    filepath = os.path.join("data", "operations.xls")
+    df = pd.read_excel(filepath)
+    df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
+    filter_by_date: pd.DataFrame = df[(df['Дата операции'] >= start_date) & (df['Дата операции'] <= end_date) & (df["Сумма платежа"] < 0)]
+    top_transactions = filter_by_date.sort_values(by="Сумма платежа", ascending=True).head(5)
+    group_num_cards = filter_by_date.groupby(filter_by_date["Номер карты"])
+    sum_pay_cards = group_num_cards["Сумма платежа"].sum()
+    print(top_transactions)
+    print(sum_pay_cards)
+    # print(group_num_cards)
+    return top_transactions, sum_pay_cards
+
+
+
+
+
+
+
+def get_tickers_dicts() -> tuple:
+    result = (None, None)
+    settings_path = os.path.join("user_settings.json")
+    try:
+        if os.path.isfile(settings_path):
+            with open(settings_path, encoding="UTF-8") as file:
+                user_settings = json.load(file)
+            tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
+            tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}
+            result = (tickers_currencies, tickers_stocks)
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return result
 
 
 def get_price_stocks(user_stocks: dict) -> dict:
@@ -73,7 +111,6 @@ def get_price_stocks(user_stocks: dict) -> dict:
         return user_stocks
 
 
-
 def get_price_currencies(user_currencies: dict) -> dict:
     try:
         if not isinstance(user_currencies, dict):
@@ -95,61 +132,40 @@ def get_price_currencies(user_currencies: dict) -> dict:
     finally:
         return user_currencies
 
+
+def get_json_user_operations():
+    user_date = "2021-12-22 13:13:13" # input("Укажите дату в формате YYYY-MM-DD HH:MM:SS: ")
+    start_date, end_date = get_range_dates(user_date)
+    if start_date and end_date:
+        top_transactions, sum_pay_info = get_operations(start_date, end_date)
+    widget_message = get_time_of_day()
+    tickers_currencies, tickers_stocks = get_tickers_dicts()
+    # currencies_result = get_price_currencies(tickers_currencies)
+    # stocks_result = get_price_stocks(tickers_stocks)
+
+    json_result = {
+        "greeting": widget_message,
+        "cards": [],
+        "top_transactions": []}
     
-    
+    for card in sum_pay_info.items():
+        print(card)
+        json_result["cards"].append({
+            "last_digits": card[0][1:],
+            "total_spent": round(abs(card[1]), 2),
+            "cashback": round(abs(card[1] / 100), 2)
+        })
 
-
-currencies, stocks = get_tickers_dict()
-# get_price_stocks(stocks)
-get_price_currencies(currencies)
-
-
-def get_operations(start_date, stop_date):
-    filepath = os.path.join("data", "operations.xls")
-    df = pd.read_excel(filepath)
-    print(df.columns)
-    # # ['Дата операции', 'Дата платежа', 'Номер карты', 'Статус',
-    #    'Сумма операции', 'Валюта операции', 'Сумма платежа', 'Валюта платежа',
-    #    'Кэшбэк', 'Категория', 'MCC', 'Описание', 'Бонусы (включая кэшбэк)',
-    #    'Округление на инвесткопилку', 'Сумма операции с округлением']
-
-
-
-#get_operations()
+    for transaction in top_transactions:
+        print(transaction)
+        json_result["top_transactions"].append({
+            "date": transaction["Дата платежа"],
+            "amount": transaction["Сумма платежа"],
+            "category": transaction["Категория"],
+            "description": transaction["Описание"]
+        })
+    print(json_result)
 
 
 
-
-
-
-def get_time_of_day(user_date: datetime) -> str:
-    message = ""
-    try:
-        if not isinstance(user_date, datetime):
-            raise TypeError("Принимается только дата, тип - datetime")   
-        if 0 <= user_date.hour < 6:
-            message = "Доброй ночи"
-        elif 6 <= user_date.hour < 12:
-            message = "Доброе утро"
-        elif 12 <= user_date.hour < 18:
-            message = "Добрый день"
-        elif 18 <= user_date.hour < 24:
-            message = "Добрый вечер"
-        else:
-            raise ValueError("Не удалось определить время суток, проверьте передаваемую дату")
-    except TypeError as type_ex:
-        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
-    except ValueError as val_ex:
-        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
-    except Exception as ex:
-        logger.debug(f"{ex.__class__.__name__}: {ex}")
-    finally:
-        return message
-
-
-
-
-get_range_dates("2023-12-22 13:13:13")
-
-
-
+get_json_user_operations()
