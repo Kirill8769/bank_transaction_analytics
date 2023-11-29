@@ -119,8 +119,8 @@ def get_tickers_dicts() -> tuple[dict[str, float] | None, dict[str, float] | Non
             user_settings = json.load(file)
         tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
         currencies_result = get_price_currencies(tickers_currencies)
-        tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}
-        stocks_result = get_price_stocks(tickers_stocks)
+        # tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}
+        stocks_result = {}#get_price_stocks(tickers_stocks)
         result = (currencies_result, stocks_result)
     except ValueError as val_ex:
         logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
