@@ -1,6 +1,7 @@
+import datetime
 import json
 
-from src.utils import get_operations, get_range_dates, get_tickers_dicts, get_time_of_day
+from src.utils import get_user_operations_by_interval, get_range_dates, get_prices_user_tickers, get_time_of_day
 
 
 def get_json_user_operations(user_date: str) -> None:
@@ -27,38 +28,40 @@ def get_json_user_operations(user_date: str) -> None:
     }
 
     start_date, end_date = get_range_dates(user_date)
-    top_transactions, sum_pay_info = get_operations(start_date, end_date)
+    if isinstance(start_date, datetime) and isinstance(end_date, datetime):
+        top_transactions, sum_pay_info = get_user_operations_by_interval(start_date, end_date)
 
-    currencies_result, stocks_result = get_tickers_dicts()
+        if not top_transactions.empty:
+            for _, transaction in top_transactions.iterrows():
+                json_result["top_transactions"].append(
+                    {
+                        "date": transaction["Дата платежа"],
+                        "amount": transaction["Сумма платежа"],
+                        "category": transaction["Категория"],
+                        "description": transaction["Описание"],
+                    }
+                )
 
-    if not sum_pay_info.empty:
-        for card, sum_pay in sum_pay_info.items():
-            json_result["cards"].append(
-                {
-                    "last_digits": card[1:],
-                    "total_spent": round(abs(sum_pay), 2),
-                    "cashback": round(abs(sum_pay / 100), 2),
-                }
-            )
+        if not sum_pay_info.empty:
+            for card, sum_pay in sum_pay_info.items():
+                json_result["cards"].append(
+                    {
+                        "last_digits": card[1:],
+                        "total_spent": round(abs(sum_pay), 2),
+                        "cashback": round(abs(sum_pay / 100), 2),
+                    }
+                )
 
-    if not top_transactions.empty:
-        for _, transaction in top_transactions.iterrows():
-            json_result["top_transactions"].append(
-                {
-                    "date": transaction["Дата платежа"],
-                    "amount": transaction["Сумма платежа"],
-                    "category": transaction["Категория"],
-                    "description": transaction["Описание"],
-                }
-            )
+    currencies_result, stocks_result = get_prices_user_tickers()
+    if isinstance(currencies_result, dict):
+        if currencies_result:
+            for currency, rate in currencies_result.items():
+                json_result["currency_rates"].append({"currency": currency, "rate": rate})
+    
 
-    if currencies_result:
-        for currency, rate in currencies_result.items():
-            json_result["currency_rates"].append({"currency": currency, "rate": rate})
+    if isinstance(stocks_result, dict):
+        if stocks_result:
+            for stock, price in stocks_result.items():
+                json_result["stock_prices"].append({"stock": stock, "price": price})
 
-    if stocks_result:
-        for stock, price in stocks_result.items():
-            json_result["stock_prices"].append({"stock": stock, "price": price})
-
-    # with open("result.json", "w", encoding="UTF-8") as file:
-    #     json.dump(json_result, file, indent=4, ensure_ascii=False)
+    return json.dumps(json_result, indent=4, ensure_ascii=False)

@@ -5,8 +5,8 @@ from typing import Any, Callable
 
 import pandas as pd
 
-from config import path_project
-from loggers import logger
+from src.config import path_project
+from src.loggers import logger
 
 
 def saving_to_file(filename: str | None = None) -> Callable:

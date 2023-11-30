@@ -2,19 +2,30 @@ import json
 import os
 import re
 from datetime import datetime
+from typing import Mapping, Union
 
 import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-from config import path_project
-from loggers import logger
+from src.config import path_project
+from src.loggers import logger
 
 load_dotenv()
 API_MARKETSTACK = os.getenv("API_MARKETSTACK")
 
 
-def check_date(date_checked: str) -> datetime:
+def check_date(date_checked: str) -> datetime | None:
+    """
+    Проверяет строку с датой на соответствие формату и возвращает объект datetime.
+
+    :param date_checked: Строка с датой в формате YYYY-MM-DD HH:MM:SS.
+    :return: Объект datetime, представляющий дату и время.
+    :raises TypeError: Если передан неверный тип данных в date_checked (ожидается str).
+    :raises ValueError: Если передан неверный формат даты (ожидается YYYY-MM-DD HH:MM:SS).
+    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
+    """
+    result_date = None
     try:
         if not isinstance(date_checked, str):
             raise TypeError("Передан неверный тип данных, ожидается str")
@@ -22,13 +33,15 @@ def check_date(date_checked: str) -> datetime:
         date_str = pattern.search(date_checked)
         if not date_str:
             raise ValueError("Передан неверный формат даты, ожидается YYYY-MM-DD HH:MM:SS")
-        return datetime.strptime(date_str[0], "%Y-%m-%d %H:%M:%S")
+        result_date = datetime.strptime(date_str[0], "%Y-%m-%d %H:%M:%S")
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except ValueError as val_ex:
         logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return result_date
 
 
 
@@ -73,7 +86,7 @@ def get_time_of_day() -> str:
     return message
 
 
-def get_operations(start_date: datetime, end_date: datetime) -> tuple[pd.DataFrame | None, pd.Series | None]:
+def get_user_operations_by_interval(start_date: datetime, end_date: datetime) -> tuple[None | pd.DataFrame, None | pd.Series]:
     """
     Получает операции пользователя из файла, в заданном временном интервале.
 
@@ -83,10 +96,10 @@ def get_operations(start_date: datetime, end_date: datetime) -> tuple[pd.DataFra
     :raises TypeError: Если start_date или end_date не являются объектами datetime.
     :raises ValueError: Если файл с операциями не найден или если возникли проблемы с фильтрацией данных.
     """
-    result = (None, None)
+    result: tuple[None | pd.DataFrame, None | pd.Series] = (None, None)
     try:
         if not isinstance(start_date, datetime) or not isinstance(end_date, datetime):
-            raise TypeError("Ожидаются две даты формата с типом данных datetime")
+            raise TypeError("Ожидаются две даты с типом данных datetime")
         file_operations = os.path.join(path_project, "data", "operations.xls")
         if not os.path.isfile(file_operations):
             raise ValueError("Файл с операциями пользователя не найден")
@@ -109,7 +122,7 @@ def get_operations(start_date: datetime, end_date: datetime) -> tuple[pd.DataFra
         return result
 
 
-def get_tickers_dicts() -> tuple[dict[str, float] | None, dict[str, float] | None]:
+def get_prices_user_tickers() -> tuple[dict[str, Union[int, float]] | None, dict[str, Union[int, float]] | None]:
     """
     Получает тикеры валют и акций из файла пользовательских настроек,
     с ними обращается к функциям для получения текущей цены на перечисленные
@@ -119,7 +132,7 @@ def get_tickers_dicts() -> tuple[dict[str, float] | None, dict[str, float] | Non
     :raises ValueError: Если файл с настройками пользователя не найден.
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
-    result = (None, None)
+    result: tuple[dict[str, Union[int, float]] | None, dict[str, Union[int, float]] | None] = (None, None)
     try:
         settings_file = os.path.join(path_project, "user_settings.json")
         if not os.path.isfile(settings_file):
@@ -139,7 +152,7 @@ def get_tickers_dicts() -> tuple[dict[str, float] | None, dict[str, float] | Non
         return result
 
 
-def get_price_stocks(user_stocks: dict[str, int]) -> dict[str, float]:
+def get_price_stocks(user_stocks: dict[str, int]) -> dict[str, float] | dict[str, int]:
     """
     Получает текущие цены акций из S&P 500.
 
@@ -150,7 +163,7 @@ def get_price_stocks(user_stocks: dict[str, int]) -> dict[str, float]:
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
     try:
-        if not isinstance(user_stocks, dict):
+        if not isinstance(user_stocks, Mapping):
             raise TypeError("Передан неверный формат, ожидается словарь с акциями")
         if user_stocks:
             symbols = ",".join(user_stocks.keys())
@@ -172,7 +185,7 @@ def get_price_stocks(user_stocks: dict[str, int]) -> dict[str, float]:
         return user_stocks
 
 
-def get_price_currencies(user_currencies: dict[str, int]) -> dict[str, float]:
+def get_price_currencies(user_currencies: dict[str, int]) -> dict[str, float] | dict[str, int]:
     """
     Получает текущие курсы валют.
 

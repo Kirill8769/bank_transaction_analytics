@@ -5,7 +5,7 @@ import pandas as pd
 from src.loggers import logger
 
 
-def get_categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) -> list[dict]:
+def get_categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) -> str:
     """
     Анализирует данные по кэшбэку за определенный год и месяц, возвращает JSON-строку со списком
     категорий с увеличенным кэшбэком, отсортированных по убыванию.
