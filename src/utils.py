@@ -1,7 +1,7 @@
 import os
 import re
 from datetime import datetime
-from typing import Mapping, Union
+from typing import Any
 
 import pandas as pd
 import requests
@@ -41,7 +41,6 @@ def check_date(date_checked: str) -> datetime | None:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
         return result_date
-
 
 
 def get_range_dates(user_date: str) -> tuple[datetime | None, datetime | None]:
@@ -85,7 +84,9 @@ def get_time_of_day() -> str:
     return message
 
 
-def get_user_operations_by_interval(start_date: datetime, end_date: datetime) -> tuple[None | pd.DataFrame, None | pd.Series]:
+def get_user_operations_by_interval(
+    start_date: datetime, end_date: datetime
+) -> tuple[None | pd.DataFrame, None | pd.Series]:
     """
     Получает операции пользователя из файла, в заданном временном интервале.
 
@@ -100,6 +101,8 @@ def get_user_operations_by_interval(start_date: datetime, end_date: datetime) ->
         if not isinstance(start_date, datetime) or not isinstance(end_date, datetime):
             raise TypeError("Ожидаются две даты с типом данных datetime")
         df = get_df_operations()
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Из files.py не получен DataFrame")
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         filter_by_date: pd.DataFrame = df[
             (df["Дата операции"] >= start_date) & (df["Дата операции"] <= end_date) & (df["Сумма платежа"] < 0)
@@ -118,7 +121,7 @@ def get_user_operations_by_interval(start_date: datetime, end_date: datetime) ->
         return result
 
 
-def get_prices_user_tickers() -> tuple[dict[str, Union[int, float]] | None, dict[str, Union[int, float]] | None]:
+def get_prices_user_tickers() -> tuple[dict[str, float] | dict[str, int], dict[str, float] | dict[str, int]]:
     """
     Получает тикеры валют и акций из файла пользовательских настроек,
     с ними обращается к функциям для получения текущей цены на перечисленные
@@ -128,7 +131,7 @@ def get_prices_user_tickers() -> tuple[dict[str, Union[int, float]] | None, dict
     :raises ValueError: Если файл с настройками пользователя не найден.
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
-    result: tuple[dict[str, Union[int, float]] | None, dict[str, Union[int, float]] | None] = (None, None)
+    result: tuple[dict[str, float] | dict[str, int], dict[str, float] | dict[str, int]] = ({"": 0}, {"": 0})
     try:
         tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
         currencies_result = get_price_currencies(tickers_currencies)
@@ -154,7 +157,7 @@ def get_price_stocks(user_stocks: dict[str, int]) -> dict[str, float] | dict[str
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
     try:
-        if not isinstance(user_stocks, Mapping):
+        if not isinstance(user_stocks, dict):
             raise TypeError("Передан неверный формат, ожидается словарь с акциями")
         if user_stocks:
             symbols = ",".join(user_stocks.keys())

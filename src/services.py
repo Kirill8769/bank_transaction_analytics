@@ -36,4 +36,3 @@ def get_categories_of_increased_cashback(data: pd.DataFrame, year: int, month: i
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
         return json.dumps(json_result, indent=4, ensure_ascii=False)
-    

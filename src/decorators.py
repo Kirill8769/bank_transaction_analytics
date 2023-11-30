@@ -16,7 +16,7 @@ def saving_to_file(filename: str | None = None) -> Callable:
     :param filename: Имя файла записи отчётов.
     :return: Декорированная функция.
     """
-    
+
     def wrapper(func: Callable) -> Callable:
         @wraps(func)
         def inner(*args: tuple, **kwargs: dict) -> Any:
@@ -37,5 +37,7 @@ def saving_to_file(filename: str | None = None) -> Callable:
                 logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
             except Exception as ex:
                 logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+
         return inner
+
     return wrapper

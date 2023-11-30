@@ -29,7 +29,7 @@ def get_df_operations() -> pd.DataFrame | None:
         return df_operations
 
 
-def get_user_settings() -> str:
+def get_user_settings() -> dict:
     """
     Возвращает настройки пользователя в формате JSON.
 
@@ -37,7 +37,7 @@ def get_user_settings() -> str:
     :raises ValueError: Если файл с настройками пользователя не найден.
     :raises Exception: Если возникает неожиданная ошибка при чтении файла.
     """
-    settings = ""
+    settings = {}
     try:
         settings_file = os.path.join(path_project, "user_settings.json")
         if not os.path.isfile(settings_file):
