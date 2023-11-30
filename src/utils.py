@@ -1,4 +1,3 @@
-import json
 import os
 import re
 from datetime import datetime
@@ -8,7 +7,7 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-from src.config import path_project
+from src.files import get_df_operations, user_settings
 from src.loggers import logger
 
 load_dotenv()
@@ -100,10 +99,7 @@ def get_user_operations_by_interval(start_date: datetime, end_date: datetime) ->
     try:
         if not isinstance(start_date, datetime) or not isinstance(end_date, datetime):
             raise TypeError("Ожидаются две даты с типом данных datetime")
-        file_operations = os.path.join(path_project, "data", "operations.xls")
-        if not os.path.isfile(file_operations):
-            raise ValueError("Файл с операциями пользователя не найден")
-        df = pd.read_excel(file_operations)
+        df = get_df_operations()
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         filter_by_date: pd.DataFrame = df[
             (df["Дата операции"] >= start_date) & (df["Дата операции"] <= end_date) & (df["Сумма платежа"] < 0)
@@ -134,11 +130,6 @@ def get_prices_user_tickers() -> tuple[dict[str, Union[int, float]] | None, dict
     """
     result: tuple[dict[str, Union[int, float]] | None, dict[str, Union[int, float]] | None] = (None, None)
     try:
-        settings_file = os.path.join(path_project, "user_settings.json")
-        if not os.path.isfile(settings_file):
-            raise ValueError("Файл с операциями пользователя не найден")
-        with open(settings_file, encoding="UTF-8") as file:
-            user_settings = json.load(file)
         tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
         currencies_result = get_price_currencies(tickers_currencies)
         tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}

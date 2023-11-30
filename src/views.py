@@ -8,12 +8,10 @@ def get_json_user_operations(user_date: str) -> None:
     """
     Функция принимает на вход строку с датой и временем в формате YYYY-MM-DD HH:MM:SS,
     и возвращающую json-ответ со следующими данными:
-
     Приветствие, в зависимости от текущего времени
     Информацию по каждой карте (Последние 4 цифры карты, сумма расходов, кэшбэк)
     Топ-5 транзакции по сумме платежа
-    Курс валют
-    Стоимость акций из S&P 500
+    Курсы валют и стоимость акций из S&P 500
 
     :param user_date: Строка с датой и временем в формате YYYY-MM-DD HH:MM:SS.
     :return: None
@@ -28,29 +26,28 @@ def get_json_user_operations(user_date: str) -> None:
     }
 
     start_date, end_date = get_range_dates(user_date)
-    if isinstance(start_date, datetime) and isinstance(end_date, datetime):
-        top_transactions, sum_pay_info = get_user_operations_by_interval(start_date, end_date)
+    top_transactions, sum_pay_info = get_user_operations_by_interval(start_date, end_date)
 
-        if not top_transactions.empty:
-            for _, transaction in top_transactions.iterrows():
-                json_result["top_transactions"].append(
-                    {
-                        "date": transaction["Дата платежа"],
-                        "amount": transaction["Сумма платежа"],
-                        "category": transaction["Категория"],
-                        "description": transaction["Описание"],
-                    }
-                )
+    if not top_transactions.empty:
+        for _, transaction in top_transactions.iterrows():
+            json_result["top_transactions"].append(
+                {
+                    "date": transaction["Дата платежа"],
+                    "amount": transaction["Сумма платежа"],
+                    "category": transaction["Категория"],
+                    "description": transaction["Описание"],
+                }
+            )
 
-        if not sum_pay_info.empty:
-            for card, sum_pay in sum_pay_info.items():
-                json_result["cards"].append(
-                    {
-                        "last_digits": card[1:],
-                        "total_spent": round(abs(sum_pay), 2),
-                        "cashback": round(abs(sum_pay / 100), 2),
-                    }
-                )
+    if not sum_pay_info.empty:
+        for card, sum_pay in sum_pay_info.items():
+            json_result["cards"].append(
+                {
+                    "last_digits": card[1:],
+                    "total_spent": round(abs(sum_pay), 2),
+                    "cashback": round(abs(sum_pay / 100), 2),
+                }
+            )
 
     currencies_result, stocks_result = get_prices_user_tickers()
     if isinstance(currencies_result, dict):

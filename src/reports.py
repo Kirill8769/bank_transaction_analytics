@@ -18,7 +18,7 @@ def spending_by_category(df: pd.DataFrame,
             user_date_dt = datetime.now()
         else:
             user_date_dt = check_date(date)
-        if not isinstance(date, datetime):
+        if not isinstance(user_date_dt, datetime):
             raise ValueError("Проблема с переданной датой, смотрите логи")
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Передан неверный формат объекта с транзакциями, ожидается DataFrame")
