@@ -14,29 +14,38 @@ load_dotenv()
 API_MARKETSTACK = os.getenv("API_MARKETSTACK")
 
 
+def check_date(date_checked: str) -> datetime:
+    try:
+        if not isinstance(date_checked, str):
+            raise TypeError("Передан неверный тип данных, ожидается str")
+        pattern = re.compile(r"\b\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\b")
+        date_str = pattern.search(date_checked)
+        if not date_str:
+            raise ValueError("Передан неверный формат даты, ожидается YYYY-MM-DD HH:MM:SS")
+        return datetime.strptime(date_str[0], "%Y-%m-%d %H:%M:%S")
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+
+
+
 def get_range_dates(user_date: str) -> tuple[datetime | None, datetime | None]:
     """
-    Преобразует строку с датой в формат datetime и возвращает начальную и конечную даты для заданного месяца.
+    Возвращает начальную и конечную даты в виде кортежа на основе входной строки пользователя.
 
     :param user_date: Строка с датой в формате YYYY-MM-DD HH:MM:SS.
-    :return: Кортеж из двух дат: начальной и конечной.
-    :raises TypeError: Если передан неверный тип данных в user_date (ожидается str).
-    :raises ValueError: Если передана неверная форма даты (ожидается YYYY-MM-DD HH:MM:SS).
-    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
+    :return: Кортеж из двух дат: начальной и конечной. Если произошла ошибка, возвращает (None, None)
     """
     start_date = None
     end_date = None
     try:
-        if not isinstance(user_date, str):
-            raise TypeError("Передан неверный тип данных, ожидается str")
-        pattern = re.compile(r"\b\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\b")
-        date_str = pattern.search(user_date)
-        if not date_str:
-            raise ValueError("Передан неверный формат даты, ожидается YYYY-MM-DD HH:MM:SS")
-        end_date = datetime.strptime(date_str[0], "%Y-%m-%d %H:%M:%S")
+        end_date = check_date(user_date)
+        if not isinstance(end_date, datetime):
+            raise ValueError("Проблема с переданной датой, смотрите логи")
         start_date = datetime(end_date.year, end_date.month, 1)
-    except TypeError as type_ex:
-        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except ValueError as val_ex:
         logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
     except Exception as ex:
@@ -119,8 +128,8 @@ def get_tickers_dicts() -> tuple[dict[str, float] | None, dict[str, float] | Non
             user_settings = json.load(file)
         tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
         currencies_result = get_price_currencies(tickers_currencies)
-        # tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}
-        stocks_result = {}#get_price_stocks(tickers_stocks)
+        tickers_stocks = {key: 0 for key in user_settings["user_stocks"]}
+        stocks_result = get_price_stocks(tickers_stocks)
         result = (currencies_result, stocks_result)
     except ValueError as val_ex:
         logger.error(f"{val_ex.__class__.__name__}: {val_ex}")

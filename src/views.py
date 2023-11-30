@@ -60,5 +60,5 @@ def get_json_user_operations(user_date: str) -> None:
         for stock, price in stocks_result.items():
             json_result["stock_prices"].append({"stock": stock, "price": price})
 
-    with open("result.json", "w", encoding="UTF-8") as file:
-        json.dump(json_result, file, indent=4, ensure_ascii=False)
+    # with open("result.json", "w", encoding="UTF-8") as file:
+    #     json.dump(json_result, file, indent=4, ensure_ascii=False)

@@ -14,8 +14,8 @@ def my_logger():
     else:
         console_logger = logging.getLogger("logger")
         console_logger.setLevel("DEBUG")
-        log_name = os.path.join(path_project, "logs", f'log_{datetime.today().strftime("%d_%m_%Y")}.log')
-        file_handler = logging.FileHandler(filename=log_name, encoding="UTF-8")
+        log_file = os.path.join(path_project, "logs", f'log_{datetime.today().strftime("%d_%m_%Y")}.log')
+        file_handler = logging.FileHandler(filename=log_file, encoding="UTF-8")
         file_formatter = logging.Formatter(
             "[%(asctime)s] %(levelname)s %(filename)s-%(funcName)s: %(message)s", datefmt="%d.%m.%Y-%H:%M:%S"
         )
