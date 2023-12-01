@@ -1,10 +1,13 @@
 import json
 from datetime import datetime
+from typing import Any
+
+import pandas as pd
 
 from src.utils import get_prices_user_tickers, get_range_dates, get_time_of_day, get_user_operations_by_interval
 
 
-def get_json_user_operations(user_date: str) -> None:
+def get_json_dashboard_info(user_date: str) -> str:
     """
     Функция принимает на вход строку с датой и временем в формате YYYY-MM-DD HH:MM:SS,
     и возвращающую json-ответ со следующими данными:
@@ -17,7 +20,7 @@ def get_json_user_operations(user_date: str) -> None:
     :return: None
     """
     widget_message = get_time_of_day()
-    json_result = {
+    json_result: dict[str, str | list[Any]] = {
         "greeting": widget_message,
         "cards": [],
         "top_transactions": [],
@@ -29,7 +32,7 @@ def get_json_user_operations(user_date: str) -> None:
     if isinstance(start_date, datetime) and isinstance(end_date, datetime):
         top_transactions, sum_pay_info = get_user_operations_by_interval(start_date, end_date)
 
-        if not top_transactions.empty:
+        if isinstance(top_transactions, pd.DataFrame) and not top_transactions.empty:
             for _, transaction in top_transactions.iterrows():
                 json_result["top_transactions"].append(
                     {
@@ -40,7 +43,7 @@ def get_json_user_operations(user_date: str) -> None:
                     }
                 )
 
-        if not sum_pay_info.empty:
+        if isinstance(sum_pay_info, pd.Series) and not sum_pay_info.empty:
             for card, sum_pay in sum_pay_info.items():
                 json_result["cards"].append(
                     {

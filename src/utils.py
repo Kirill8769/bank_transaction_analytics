@@ -121,7 +121,7 @@ def get_user_operations_by_interval(
         return result
 
 
-def get_prices_user_tickers() -> tuple[dict[str, float] | dict[str, int], dict[str, float] | dict[str, int]]:
+def get_prices_user_tickers() -> tuple[dict[str, float] | dict[str, int] | None, dict[str, float] | dict[str, int] | None]:
     """
     Получает тикеры валют и акций из файла пользовательских настроек,
     с ними обращается к функциям для получения текущей цены на перечисленные
@@ -131,7 +131,8 @@ def get_prices_user_tickers() -> tuple[dict[str, float] | dict[str, int], dict[s
     :raises ValueError: Если файл с настройками пользователя не найден.
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
-    result: tuple[dict[str, float] | dict[str, int], dict[str, float] | dict[str, int]] = ({"": 0}, {"": 0})
+    result: tuple[dict[str, float] | dict[str, int] | None, dict[str, float] | dict[str, int] | None] = (None, None)
+    print(result)
     try:
         tickers_currencies = {key: 0 for key in user_settings["user_currencies"]}
         currencies_result = get_price_currencies(tickers_currencies)

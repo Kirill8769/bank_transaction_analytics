@@ -13,7 +13,7 @@ def spending_by_category(df: pd.DataFrame, category: str, date: str | None = Non
     filtered_transactions = None
     try:
         if not date:
-            user_date_dt = datetime.now()
+            user_date_dt: datetime | None = datetime.now()
         else:
             user_date_dt = check_date(date)
         if not isinstance(user_date_dt, datetime):

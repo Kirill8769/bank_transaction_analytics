@@ -19,6 +19,12 @@ def get_categories_of_increased_cashback(data: pd.DataFrame, year: int, month: i
     """
     json_result = []
     try:
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("Передан неверный тип данных объекта data, ожидается DataFrame")
+        if not isinstance(year, int):
+            raise TypeError("Передан неверный тип данных year, ожидается int")
+        if not isinstance(month, int):
+            raise TypeError("Передан неверный тип данных month, ожидается int")
         data["Дата платежа"] = pd.to_datetime(data["Дата платежа"], format="%d.%m.%Y")
         filtered_of_ym = data.loc[(data["Дата платежа"].dt.year == year) & (data["Дата платежа"].dt.month == month)]
         group_by_category = filtered_of_ym.groupby(filtered_of_ym["Категория"])
