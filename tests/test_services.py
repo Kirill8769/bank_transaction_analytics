@@ -1,7 +1,6 @@
 import json
 import pandas as pd
 import pytest
-from unittest.mock import patch
 
 from src.services import get_categories_of_increased_cashback
 

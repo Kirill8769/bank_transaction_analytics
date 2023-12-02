@@ -1,10 +1,10 @@
 import json
-from datetime import datetime
 from typing import Any
 
 import pandas as pd
 
-from src.utils import get_prices_user_tickers, get_range_dates, get_time_of_day, get_user_operations_by_interval
+from src.files import user_settings
+from src.utils import get_price_currencies_user, get_price_stocks_user, get_time_of_day, get_user_operations_by_interval
 
 
 def get_json_dashboard_info(user_date: str) -> str:
@@ -28,37 +28,36 @@ def get_json_dashboard_info(user_date: str) -> str:
         "stock_prices": [],
     }
 
-    start_date, end_date = get_range_dates(user_date)
-    if isinstance(start_date, datetime) and isinstance(end_date, datetime):
-        top_transactions, sum_pay_info = get_user_operations_by_interval(start_date, end_date)
+    top_transactions, sum_pay_info = get_user_operations_by_interval(user_date)
 
-        if isinstance(top_transactions, pd.DataFrame) and not top_transactions.empty:
-            for _, transaction in top_transactions.iterrows():
-                json_result["top_transactions"].append(
-                    {
-                        "date": transaction["Дата платежа"],
-                        "amount": transaction["Сумма платежа"],
-                        "category": transaction["Категория"],
-                        "description": transaction["Описание"],
-                    }
-                )
+    if isinstance(top_transactions, pd.DataFrame) and not top_transactions.empty:
+        for _, transaction in top_transactions.iterrows():
+            json_result["top_transactions"].append(
+                {
+                    "date": transaction["Дата платежа"],
+                    "amount": transaction["Сумма платежа"],
+                    "category": transaction["Категория"],
+                    "description": transaction["Описание"],
+                }
+            )
 
-        if isinstance(sum_pay_info, pd.Series) and not sum_pay_info.empty:
-            for card, sum_pay in sum_pay_info.items():
-                json_result["cards"].append(
-                    {
-                        "last_digits": card[1:],
-                        "total_spent": round(abs(sum_pay), 2),
-                        "cashback": round(abs(sum_pay / 100), 2),
-                    }
-                )
+    if isinstance(sum_pay_info, pd.Series) and not sum_pay_info.empty:
+        for card, sum_pay in sum_pay_info.items():
+            json_result["cards"].append(
+                {
+                    "last_digits": card[1:],
+                    "total_spent": round(abs(sum_pay), 2),
+                    "cashback": round(abs(sum_pay / 100), 2),
+                }
+            )
 
-    currencies_result, stocks_result = get_prices_user_tickers()
+    currencies_result = get_price_currencies_user(user_settings)
     if isinstance(currencies_result, dict):
         if currencies_result:
             for currency, rate in currencies_result.items():
                 json_result["currency_rates"].append({"currency": currency, "rate": rate})
 
+    stocks_result = get_price_stocks_user(user_settings)
     if isinstance(stocks_result, dict):
         if stocks_result:
             for stock, price in stocks_result.items():
