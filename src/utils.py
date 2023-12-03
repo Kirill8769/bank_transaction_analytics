@@ -81,11 +81,12 @@ def get_user_operations_by_interval(user_date: str) -> tuple[None | pd.DataFrame
             raise TypeError("Из files.py не получен DataFrame")
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         filter_by_date: pd.DataFrame = df[
-            (df["Дата операции"] >= start_date) & (df["Дата операции"] <= end_date) & (df["Сумма платежа"] < 0)
+            (df["Дата операции"] >= start_date)
+            & (df["Дата операции"] <= end_date)
+            & (df["Сумма платежа"] < 0)
+            & (df["Статус"] == "OK")
         ]
         top_transactions = filter_by_date.sort_values(by="Сумма платежа", ascending=True).head(5)
-        filter_by_date.loc[:, "Сумма платежа"] = filter_by_date["Сумма платежа"].astype(float)
-        filter_by_date.loc[:, "Номер карты"] = filter_by_date["Номер карты"].astype(str)
         group_num_cards = filter_by_date.groupby(filter_by_date["Номер карты"])
         sum_pay_cards = group_num_cards["Сумма платежа"].sum()
         result = (top_transactions, sum_pay_cards)

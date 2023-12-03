@@ -4,8 +4,12 @@ from typing import Any
 import pandas as pd
 
 from src.files import user_settings
-from src.utils import (get_price_currencies_user, get_price_stocks_user, get_time_of_day,
-                       get_user_operations_by_interval)
+from src.utils import (
+    get_price_currencies_user,
+    get_price_stocks_user,
+    get_time_of_day,
+    get_user_operations_by_interval,
+)
 
 
 def get_json_dashboard_info(user_date: str) -> str:
@@ -35,7 +39,7 @@ def get_json_dashboard_info(user_date: str) -> str:
         for _, transaction in top_transactions.iterrows():
             json_result["top_transactions"].append(
                 {
-                    "date": transaction["Дата платежа"],
+                    "date": transaction["Дата операции"].strftime("%d.%m.%Y"),
                     "amount": transaction["Сумма платежа"],
                     "category": transaction["Категория"],
                     "description": transaction["Описание"],

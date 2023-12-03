@@ -4,8 +4,14 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import pytest
 
-from src.utils import (API_MARKETSTACK, check_date, get_price_currencies_user, get_price_stocks_user, get_time_of_day,
-                       get_user_operations_by_interval)
+from src.utils import (
+    API_MARKETSTACK,
+    check_date,
+    get_price_currencies_user,
+    get_price_stocks_user,
+    get_time_of_day,
+    get_user_operations_by_interval,
+)
 
 
 def test_check_date_correct():

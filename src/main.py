@@ -7,7 +7,7 @@ from src.views import get_json_dashboard_info
 
 
 def main() -> None:
-    json_result = get_json_dashboard_info("2021-10-22 11:11:11")
+    json_result = get_json_dashboard_info("2021-09-22 11:11:11")
     print(json_result)
     df_operations: pd.DataFrame | None = get_df_operations()
     if df_operations is not None:
