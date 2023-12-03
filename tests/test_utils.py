@@ -1,30 +1,31 @@
-import pytest
 from datetime import datetime
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 import pandas as pd
+import pytest
 
-from src.utils import check_date, get_price_currencies_user, get_price_stocks_user, get_user_operations_by_interval, get_time_of_day, API_MARKETSTACK
+from src.utils import (API_MARKETSTACK, check_date, get_price_currencies_user, get_price_stocks_user, get_time_of_day,
+                       get_user_operations_by_interval)
 
 
 def test_check_date_correct():
     assert check_date("2021-10-22 11:11:11") == datetime(2021, 10, 22, 11, 11, 11)
 
 
-@pytest.mark.parametrize("date, expected", [
-    ("2021-10-22", None),
-    (2021, None)
-])
+@pytest.mark.parametrize("date, expected", [("2021-10-22", None), (2021, None)])
 def test_check_date_incorrect(date, expected):
     assert check_date(date) == expected
 
 
-@pytest.mark.parametrize("current_time, expected", [
-    (datetime(2023, 1, 1, 20, 0, 0), "Добрый вечер"),
-    (datetime(2023, 1, 1, 14, 0, 0), "Добрый день"),
-    (datetime(2023, 1, 1, 8, 0, 0), "Доброе утро"),
-    (datetime(2023, 1, 1, 2, 0, 0), "Доброй ночи")
-])
+@pytest.mark.parametrize(
+    "current_time, expected",
+    [
+        (datetime(2023, 1, 1, 20, 0, 0), "Добрый вечер"),
+        (datetime(2023, 1, 1, 14, 0, 0), "Добрый день"),
+        (datetime(2023, 1, 1, 8, 0, 0), "Доброе утро"),
+        (datetime(2023, 1, 1, 2, 0, 0), "Доброй ночи"),
+    ],
+)
 @patch("src.utils.datetime")
 def test_get_time_of_day_all_days(mock_datetime, current_time, expected):
     mock_datetime.today.return_value = current_time

@@ -12,7 +12,7 @@ from src.utils import check_date
 def spending_by_category(df: pd.DataFrame, category: str, date: str | None = None) -> pd.DataFrame | None:
     filtered_transactions = None
     try:
-        if not date:
+        if date is None:
             user_date_dt: datetime | None = datetime.now()
         else:
             user_date_dt = check_date(date)
@@ -22,6 +22,9 @@ def spending_by_category(df: pd.DataFrame, category: str, date: str | None = Non
             raise TypeError("Передан неверный формат объекта с транзакциями, ожидается DataFrame")
         if not isinstance(category, str):
             raise TypeError("Передан неверный формат категории, ожидается тип данных str")
+        for column in ["Дата платежа", "Категория"]:
+            if column not in df.columns:
+                raise ValueError("Проблема с переданным объектом DataFrame, нет столбцов по которым происходит отбор")
         df["Дата платежа"] = pd.to_datetime(df["Дата платежа"], format="%d.%m.%Y")
         back_date_dt = user_date_dt - relativedelta(months=3)
         filtered_transactions = df[

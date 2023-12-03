@@ -4,7 +4,8 @@ from typing import Any
 import pandas as pd
 
 from src.files import user_settings
-from src.utils import get_price_currencies_user, get_price_stocks_user, get_time_of_day, get_user_operations_by_interval
+from src.utils import (get_price_currencies_user, get_price_stocks_user, get_time_of_day,
+                       get_user_operations_by_interval)
 
 
 def get_json_dashboard_info(user_date: str) -> str:
@@ -20,7 +21,7 @@ def get_json_dashboard_info(user_date: str) -> str:
     :return: None
     """
     widget_message = get_time_of_day()
-    json_result: dict[str, str | list[Any]] = {
+    json_result: dict[str, Any] = {
         "greeting": widget_message,
         "cards": [],
         "top_transactions": [],
@@ -43,13 +44,14 @@ def get_json_dashboard_info(user_date: str) -> str:
 
     if isinstance(sum_pay_info, pd.Series) and not sum_pay_info.empty:
         for card, sum_pay in sum_pay_info.items():
-            json_result["cards"].append(
-                {
-                    "last_digits": card[1:],
-                    "total_spent": round(abs(sum_pay), 2),
-                    "cashback": round(abs(sum_pay / 100), 2),
-                }
-            )
+            if isinstance(card, str) and isinstance(sum_pay, float):
+                json_result["cards"].append(
+                    {
+                        "last_digits": card[1:],
+                        "total_spent": round(abs(sum_pay), 2),
+                        "cashback": round(abs(sum_pay) / 100, 2),
+                    }
+                )
 
     currencies_result = get_price_currencies_user(user_settings)
     if isinstance(currencies_result, dict):
