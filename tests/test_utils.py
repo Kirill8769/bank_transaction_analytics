@@ -73,18 +73,18 @@ def test_get_price_currencies_user_bad_connect(mock_get, fix_user_settings):
     mock_response.status_code = 404
     mock_response.json.return_value = {"Page not found"}
     mock_get.return_value = mock_response
-    assert get_price_currencies_user(fix_user_settings) == None
+    assert get_price_currencies_user(fix_user_settings) is None
     mock_get.assert_called_once_with("https://www.cbr-xml-daily.ru/daily_json.js")
 
 
 def test_get_price_currencies_user_value_error():
-    assert get_price_currencies_user({"A": ["B", "C"]}) == None
+    assert get_price_currencies_user({"A": ["B", "C"]}) is None
 
 
 @patch("requests.get")
 def test_get_price_currencies_user_other_exception(mock_get, fix_user_settings):
     mock_get.side_effect = Exception("Some error")
-    assert get_price_currencies_user(fix_user_settings) == None
+    assert get_price_currencies_user(fix_user_settings) is None
     mock_get.assert_called_once_with("https://www.cbr-xml-daily.ru/daily_json.js")
 
 
@@ -105,18 +105,18 @@ def test_get_price_stocks_user_bad_connect(mock_get, fix_user_settings):
     mock_response.status_code = 404
     mock_response.json.return_value = {"Page not found"}
     mock_get.return_value = mock_response
-    assert get_price_stocks_user(fix_user_settings) == None
+    assert get_price_stocks_user(fix_user_settings) is None
     params = {"access_key": API_MARKETSTACK, "symbols": "TSLA"}
     mock_get.assert_called_once_with("http://api.marketstack.com/v1/intraday/latest", params)
 
 
 def test_get_price_stocks_user_value_error():
-    assert get_price_stocks_user({"A": ["B", "C"]}) == None
+    assert get_price_stocks_user({"A": ["B", "C"]}) is None
 
 
 @patch("requests.get")
 def test_get_price_stocks_user_other_exception(mock_get, fix_user_settings):
     mock_get.side_effect = Exception("Some error")
-    assert get_price_stocks_user(fix_user_settings) == None
+    assert get_price_stocks_user(fix_user_settings) is None
     params = {"access_key": API_MARKETSTACK, "symbols": "TSLA"}
     mock_get.assert_called_once_with("http://api.marketstack.com/v1/intraday/latest", params)

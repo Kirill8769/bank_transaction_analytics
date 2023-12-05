@@ -3,7 +3,7 @@ import os
 
 import pandas as pd
 
-from src.config import path_project
+from src.config import PATH_PROJECT
 from src.loggers import logger
 
 
@@ -17,7 +17,7 @@ def get_df_operations() -> pd.DataFrame | None:
     """
     df_operations = None
     try:
-        file_operations = os.path.join(path_project, "data", "operations.xls")
+        file_operations = os.path.join(PATH_PROJECT, "data", "operations.xls")
         if not os.path.isfile(file_operations):
             raise ValueError("Файл с операциями пользователя не найден")
         df_operations = pd.read_excel(file_operations)
@@ -39,7 +39,7 @@ def get_user_settings() -> dict:
     """
     settings = {}
     try:
-        settings_file = os.path.join(path_project, "user_settings.json")
+        settings_file = os.path.join(PATH_PROJECT, "user_settings.json")
         if not os.path.isfile(settings_file):
             raise ValueError("Файл с настройками пользователя не найден")
         with open(settings_file, encoding="UTF-8") as file:

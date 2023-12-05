@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import requests
@@ -61,7 +61,7 @@ def get_time_of_day() -> str:
     return message
 
 
-def get_user_operations_by_interval(user_date: str) -> tuple[None | pd.DataFrame, None | pd.Series]:
+def get_user_operations_by_interval(user_date: datetime) -> tuple[None | pd.DataFrame, None | pd.Series]:
     """
     Получает операции пользователя из файла, в заданном временном интервале.
 
@@ -72,17 +72,14 @@ def get_user_operations_by_interval(user_date: str) -> tuple[None | pd.DataFrame
 
     result: tuple[None | pd.DataFrame, None | pd.Series] = (None, None)
     try:
-        end_date = check_date(user_date)
-        if not isinstance(end_date, datetime):
-            raise ValueError("Проблема с переданной датой, смотрите логи")
-        start_date = datetime(end_date.year, end_date.month, 1)
+        start_date = datetime.replace(user_date, day=1)
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         filter_by_date: pd.DataFrame = df[
             (df["Дата операции"] >= start_date)
-            & (df["Дата операции"] <= end_date)
+            & (df["Дата операции"] <= user_date)
             & (df["Сумма платежа"] < 0)
             & (df["Статус"] == "OK")
         ]
@@ -98,6 +95,40 @@ def get_user_operations_by_interval(user_date: str) -> tuple[None | pd.DataFrame
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
         return result
+
+
+def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
+    result_df: pd.DataFrame | None = None
+    try:
+        date_dt = check_date(date)
+        if not isinstance(date_dt, datetime):
+            raise ValueError("Проблема с переданной датой, смотрите логи")
+        if not isinstance(range_data, str) or range_data.upper() not in ["W", "M", "Y", "ALL"]:
+            raise ValueError('Передан неверный диапазон данных, ожидается тип str. Возможные значения: "W", "M", "Y", "ALL"')
+        df = get_df_operations()
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Из files.py не получен DataFrame")
+        df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
+
+        if range_data == "W":
+            weekday = date_dt.weekday()
+            start_week = date_dt - timedelta(days=weekday)
+            end_week = start_week + timedelta(days=6)
+            result_df = df.loc[(df["Дата операции"] >= start_week) & (df["Дата операции"] <= end_week)]
+        elif range_data == "M":
+            result_df = df.loc[(df["Дата операции"].dt.year == date_dt.year) & (df["Дата операции"].dt.month == date_dt.month)]
+        elif range_data == "Y":
+            result_df = df.loc[df["Дата операции"].dt.year == date_dt.year]
+        else:
+            result_df = df
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return result_df
 
 
 def get_price_stocks_user(user_settings_dict: dict) -> dict[str, float] | None:
