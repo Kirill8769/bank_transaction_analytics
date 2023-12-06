@@ -2,6 +2,7 @@ import json
 
 import pandas as pd
 
+from src.files import save_result_in_json
 from src.loggers import logger
 
 
@@ -41,4 +42,5 @@ def get_categories_of_increased_cashback(data: pd.DataFrame, year: int, month: i
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        return json.dumps(json_result, indent=4, ensure_ascii=False)
+        filename = f"cashback_info_{year}_{month}.json"
+        save_result_in_json(filename=filename, json_obj=json_result)

@@ -61,7 +61,7 @@ def get_time_of_day() -> str:
     return message
 
 
-def get_user_operations_by_interval(user_date: datetime) -> tuple[None | pd.DataFrame, None | pd.Series]:
+def get_df_by_interval(date: str) -> pd.DataFrame |tuple[None | pd.DataFrame, None | pd.Series]:
     """
     Получает операции пользователя из файла, в заданном временном интервале.
 
@@ -70,23 +70,22 @@ def get_user_operations_by_interval(user_date: datetime) -> tuple[None | pd.Data
     :raises ValueError: Если файл с операциями не найден или если возникли проблемы с фильтрацией данных.
     """
 
-    result: tuple[None | pd.DataFrame, None | pd.Series] = (None, None)
+    result_df: pd.DataFrame | None = None
     try:
+        user_date = check_date(date)
+        if not isinstance(user_date, datetime):
+            raise ValueError("Проблема с переданной датой, смотрите логи")
         start_date = datetime.replace(user_date, day=1)
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
-        filter_by_date: pd.DataFrame = df[
+        result_df = df[
             (df["Дата операции"] >= start_date)
             & (df["Дата операции"] <= user_date)
             & (df["Сумма платежа"] < 0)
             & (df["Статус"] == "OK")
         ]
-        top_transactions = filter_by_date.sort_values(by="Сумма платежа", ascending=True).head(5)
-        group_num_cards = filter_by_date.groupby(filter_by_date["Номер карты"])
-        sum_pay_cards = group_num_cards["Сумма платежа"].sum()
-        result = (top_transactions, sum_pay_cards)
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except ValueError as val_ex:
@@ -94,7 +93,7 @@ def get_user_operations_by_interval(user_date: datetime) -> tuple[None | pd.Data
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        return result
+        return result_df
 
 
 def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:

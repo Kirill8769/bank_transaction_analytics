@@ -1,19 +1,17 @@
 import json
-from datetime import datetime
 from typing import Any
 
 import pandas as pd
 
-from src.files import user_settings
+from src.files import user_settings, save_result_in_json
 from src.loggers import logger
 from src.utils import (
-    check_date,
     get_filtered_df,
     get_list_categories_with_amounts,
     get_price_currencies_user,
     get_price_stocks_user,
     get_time_of_day,
-    get_user_operations_by_interval,
+    get_df_by_interval,
 )
 
 
@@ -39,12 +37,14 @@ def get_json_dashboard_info(date: str) -> str:
     }
 
     try:
-        user_date = check_date(date)
-        if not isinstance(user_date, datetime):
-            raise ValueError("Проблема с переданной датой, смотрите логи")
-        top_transactions, sum_pay_info = get_user_operations_by_interval(user_date)
-
-        if isinstance(top_transactions, pd.DataFrame) and not top_transactions.empty:
+        filtered_df = get_df_by_interval(date=date)
+        if not isinstance(filtered_df, pd.DataFrame):
+            raise TypeError("Ожидается тип данных DataFrame")
+        for column in ["Дата операции", "Сумма платежа", "Описание", "Категория"]:
+            if column not in filtered_df.columns:
+                raise ValueError("Переданный DataFrame не содержит необходимые, для обработки, поля")
+        top_transactions = filtered_df.sort_values(by="Сумма платежа", ascending=True).head(5)
+        if not top_transactions.empty:
             for _, transaction in top_transactions.iterrows():
                 json_result["top_transactions"].append(
                     {
@@ -55,7 +55,9 @@ def get_json_dashboard_info(date: str) -> str:
                     }
                 )
 
-        if isinstance(sum_pay_info, pd.Series) and not sum_pay_info.empty:
+        group_num_cards = filtered_df.groupby(filtered_df["Номер карты"])
+        sum_pay_info = group_num_cards["Сумма платежа"].sum()
+        if not sum_pay_info.empty:
             for card, sum_pay in sum_pay_info.items():
                 if isinstance(card, str) and isinstance(sum_pay, float):
                     json_result["cards"].append(
@@ -69,15 +71,18 @@ def get_json_dashboard_info(date: str) -> str:
         json_result["currency_rates"] = get_price_currencies_user(user_settings)
         json_result["stock_prices"] = get_price_stocks_user(user_settings)
 
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except ValueError as val_ex:
         logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        return json.dumps(json_result, indent=4, ensure_ascii=False)
+        filename = f"main_info_{date}.json"
+        save_result_in_json(filename=filename, json_obj=json_result)
 
 
-def get_json_events(date: str, range_data: str = "M"):
+def get_json_events(date: str, range_data: str = "M") -> str:
     json_result = {
         "expenses":
             {
@@ -116,7 +121,7 @@ def get_json_events(date: str, range_data: str = "M"):
     }
     try:
         filtered_df = get_filtered_df(date=date, range_data=range_data)
-        if filtered_df is None:
+        if not isinstance(filtered_df, pd.DataFrame):
             raise TypeError("Ожидается тип данных DataFrame")
         for column in ["Сумма платежа", "Статус", "Категория"]:
             if column not in filtered_df.columns:
@@ -160,17 +165,5 @@ def get_json_events(date: str, range_data: str = "M"):
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        return json.dumps(json_result, indent=4, ensure_ascii=False)
-
-
-
-
-
-# res = get_json_events("2021-09-22 11:11:11", "M")
-# print(res)
-
-# cur = get_price_currencies_user(user_settings)
-# print(cur)
-
-# st = get_price_stocks_user(user_settings)
-# print(st)
+        filename = f"events_info_{range_data}_{date}.json"
+        save_result_in_json(filename=filename, json_obj=json_result)
