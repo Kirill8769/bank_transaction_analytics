@@ -14,7 +14,7 @@ from src.utils import (
 )
 
 
-def get_json_dashboard_info(date: str) -> str:
+def get_json_dashboard_info(date: str) -> None:
     """
     Функция принимает на вход строку с датой и временем в формате YYYY-MM-DD HH:MM:SS,
     и возвращающую json-ответ со следующими данными:
@@ -27,8 +27,9 @@ def get_json_dashboard_info(date: str) -> str:
     :return: None
     """
     widget_message = get_time_of_day()
-    json_result: dict[str, Any] = {
+    json_result = {
         "greeting": widget_message,
+        "report_date": "",
         "cards": [],
         "top_transactions": [],
         "currency_rates": [],
@@ -37,6 +38,7 @@ def get_json_dashboard_info(date: str) -> str:
 
     try:
         filtered_df = get_df_by_interval(date=date)
+        json_result["report_date"] = date
         if not isinstance(filtered_df, pd.DataFrame):
             raise TypeError("Ожидается тип данных DataFrame")
         for column in ["Дата операции", "Сумма платежа", "Описание", "Категория"]:
@@ -77,49 +79,31 @@ def get_json_dashboard_info(date: str) -> str:
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"main_info_{date}.json"
+        filename = f"main_info.json"
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
-def get_json_events(date: str, range_data: str = "M") -> str:
+def get_json_events(date: str, range_data: str = "M") -> None:
     json_result = {
+        "report_date": "",
+        "range_date": "",
         "expenses":
             {
-                "total_amount": 0,
+                "total_amount": 0.0,
                 "main": [],
-                "transfers_and_cash": [
-                    {
-                        "category": "Наличные",
-                        "amount": 500
-                    },
-                    {
-                        "category": "Переводы",
-                        "amount": 200
-                    }
-                ]
+                "transfers_and_cash": []
             },
         "income": {
-            "total_amount": 0,
-            "main": [
-                {
-                    "category": "Пополнение_BANK007",
-                    "amount": 33000
-                },
-                {
-                    "category": "Проценты_на_остаток",
-                    "amount": 1242
-                },
-                {
-                    "category": "Кэшбэк",
-                    "amount": 29
-                }
-            ]
+            "total_amount": 0.0,
+            "main": []
         },
         "currency_rates": [],
         "stock_prices": []
     }
     try:
         filtered_df = get_filtered_df(date=date, range_data=range_data)
+        json_result["report_date"] = date
+        json_result["range_date"] = range_data
         if not isinstance(filtered_df, pd.DataFrame):
             raise TypeError("Ожидается тип данных DataFrame")
         for column in ["Сумма платежа", "Статус", "Категория"]:
@@ -164,5 +148,5 @@ def get_json_events(date: str, range_data: str = "M") -> str:
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"events_info_{range_data}_{date}.json"
+        filename = f"events_info.json"
         save_result_in_json(filename=filename, json_obj=json_result)

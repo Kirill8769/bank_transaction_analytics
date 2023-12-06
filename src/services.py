@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 import re
 
-from src.files import save_result_in_json
+from src.files import save_result_in_json, get_df_operations
 from src.loggers import logger
 
 
@@ -17,7 +17,11 @@ def categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) 
     :param month: Месяц для анализа.
     :return: None
     """
-    json_result = []
+    json_result = {
+        "year": 0,
+        "month": 0,
+        "result": []
+    }
     try:
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Передан неверный тип данных объекта data, ожидается DataFrame")
@@ -25,6 +29,8 @@ def categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) 
             raise TypeError("Передан неверный тип данных year, ожидается int")
         if not isinstance(month, int):
             raise TypeError("Передан неверный тип данных month, ожидается int")
+        json_result["year"] = year
+        json_result["month"] = month
         data["Дата операции"] = pd.to_datetime(data["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         filtered_of_ym = data.loc[(data["Дата операции"].dt.year == year) & (data["Дата операции"].dt.month == month)]
         group_by_category = filtered_of_ym.groupby(filtered_of_ym["Категория"])
@@ -33,7 +39,7 @@ def categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) 
         for category, cashback in sorted_result.items():
             if cashback <= 0:
                 break
-            json_result.append({category: cashback})
+            json_result["result"].append({category: cashback})
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except KeyError as key_ex:
@@ -58,7 +64,7 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
     :return: None
     """
     total = 0.0
-    json_result = [{"month": month, "limit": limit, "total": total}]
+    json_result = {"month": month, "limit": limit, "total": total}
     try:
         if not isinstance(month, str):
             raise TypeError("Переден неверный тип данных объекта month, ожидатется строка")
@@ -87,7 +93,30 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"invest_moneybox_info_{month}_limit_{limit}.json"
+        filename = f"invest_moneybox_result.json"
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
+def simple_search(query: str):
+    json_result = {
+        "query": query,
+        "result": []
+    }
+    try:
+        if not isinstance(query, str):
+            raise TypeError("Переден неверный тип данных объекта month, ожидатется строка")
+        df = get_df_operations()
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Из files.py не получен DataFrame")
+        search_result = df.loc[df["Описание"].str.lower().isin([query.lower()])].to_json(orient="records")
+
+        json_result["result"].append(search_result)
+        print(json_result)
+        print(type(json_result))
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        filename = f"simple_search.json"
+        save_result_in_json(filename=filename, json_obj=json_result)
