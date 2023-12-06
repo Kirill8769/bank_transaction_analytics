@@ -129,18 +129,33 @@ def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
         return result_df
+    
+
+def get_list_categories_with_amounts(df_to_handle: pd.Series) -> list:
+    result = []
+    try:
+        if isinstance(df_to_handle, pd.Series) and not df_to_handle.empty:
+            for category, sum_pay in df_to_handle.items():
+                if isinstance(category, str) and isinstance(sum_pay, float):
+                    result.append(
+                        {"category": category, "amount": round(abs(sum_pay))}
+                    )
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return result
 
 
-def get_price_stocks_user(user_settings_dict: dict) -> dict[str, float] | None:
+def get_price_stocks_user(user_settings_dict: dict) -> list | list[dict[str, float]]:
     """
     Получает текущие цены акций из S&P 500.
 
     :param user_settings_dict: Словарь с настройками пользователя
-    :return: Словарь с обновленными ценами акций.
+    :return: Список словарей с ценами акций.
     :raises ConnectionError: Если возникает ошибка подключения к API для получения цен акций.
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
-    result = None
+    result = []
     try:
         if not isinstance(user_settings_dict, dict) or "user_stocks" not in user_settings_dict.keys():
             raise ValueError("Ошибка в переданном объекте с настройками пользователя")
@@ -157,8 +172,7 @@ def get_price_stocks_user(user_settings_dict: dict) -> dict[str, float] | None:
                 raise ConnectionError(f"Ошибка подключения: {status_code}")
             json_data = response.json()
             for stock in json_data["data"]:
-                tickers_stocks[stock["symbol"]] = stock["last"]
-            result = tickers_stocks
+                result.append({"stock": stock["symbol"], "price": stock["last"]})
     except ConnectionError as conn_ex:
         logger.error(f"{conn_ex.__class__.__name__}: {conn_ex}")
     except ValueError as val_ex:
@@ -169,29 +183,28 @@ def get_price_stocks_user(user_settings_dict: dict) -> dict[str, float] | None:
         return result
 
 
-def get_price_currencies_user(user_settings_dict: dict) -> dict[str, float] | None:
+def get_price_currencies_user(user_settings_dict: dict) -> list | list[dict[str, float]]:
     """
     Получает текущие курсы валют.
 
     :param user_settings_dict: Словарь с настройками пользователя
-    :return: Словарь с обновленными курсами валют.
+    :return: Список словарей с курсами валют.
     :raises ConnectionError: Если возникает ошибка подключения к API для получения курсов валют.
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
-    result = None
+    result = []
     try:
         if not isinstance(user_settings_dict, dict) or "user_currencies" not in user_settings_dict.keys():
             raise ValueError("Ошибка в переданном объекте с настройками пользователя")
-        tickers_currencies = {key: 0.0 for key in user_settings_dict["user_currencies"]}
-        if tickers_currencies:
+        user_currency = user_settings_dict["user_currencies"]
+        if user_currency:
             url = "https://www.cbr-xml-daily.ru/daily_json.js"
             response = requests.get(url)
             if not response.status_code == 200:
                 raise ConnectionError("Ошибка подключения")
             currency_info = response.json()
-            for currency in tickers_currencies:
-                tickers_currencies[currency] = currency_info["Valute"][currency]["Value"]
-            result = tickers_currencies
+            for curr in user_currency:
+                result.append({"currency": curr, "rate": currency_info["Valute"][curr]["Value"]})
     except ConnectionError as conn_ex:
         logger.error(f"{conn_ex.__class__.__name__}: {conn_ex}")
     except ValueError as val_ex:

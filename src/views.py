@@ -9,6 +9,7 @@ from src.loggers import logger
 from src.utils import (
     check_date,
     get_filtered_df,
+    get_list_categories_with_amounts,
     get_price_currencies_user,
     get_price_stocks_user,
     get_time_of_day,
@@ -65,17 +66,8 @@ def get_json_dashboard_info(date: str) -> str:
                         }
                     )
 
-        currencies_result = get_price_currencies_user(user_settings)
-        if isinstance(currencies_result, dict):
-            if currencies_result:
-                for currency, rate in currencies_result.items():
-                    json_result["currency_rates"].append({"currency": currency, "rate": rate})
-
-        stocks_result = get_price_stocks_user(user_settings)
-        if isinstance(stocks_result, dict):
-            if stocks_result:
-                for stock, price in stocks_result.items():
-                    json_result["stock_prices"].append({"stock": stock, "price": price})
+        json_result["currency_rates"] = get_price_currencies_user(user_settings)
+        json_result["stock_prices"] = get_price_stocks_user(user_settings)
 
     except ValueError as val_ex:
         logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
@@ -89,33 +81,8 @@ def get_json_events(date: str, range_data: str = "M"):
     json_result = {
         "expenses":
             {
-                "total_amount": 32101,
-                "main": [
-                    {
-                        "category": "Супермаркеты",
-                        "amount": 17319
-                    },
-                    {
-                        "category": "Фастфуд",
-                        "amount": 3324
-                    },
-                    {
-                        "category": "Топливо",
-                        "amount": 2289
-                    },
-                    {
-                        "category": "Развлечения",
-                        "amount": 1850
-                    },
-                    {
-                        "category": "Медицина",
-                        "amount": 1350
-                    },
-                    {
-                        "category": "Остальное",
-                        "amount": 2954
-                    }
-                ],
+                "total_amount": 0,
+                "main": [],
                 "transfers_and_cash": [
                     {
                         "category": "Наличные",
@@ -128,7 +95,7 @@ def get_json_events(date: str, range_data: str = "M"):
                 ]
             },
         "income": {
-            "total_amount": 54271,
+            "total_amount": 0,
             "main": [
                 {
                     "category": "Пополнение_BANK007",
@@ -147,18 +114,67 @@ def get_json_events(date: str, range_data: str = "M"):
         "currency_rates": [],
         "stock_prices": []
     }
-    filtered_df = get_filtered_df(date=date, range_data=range_data)
-    if filtered_df is not None:
+    try:
+        filtered_df = get_filtered_df(date=date, range_data=range_data)
+        if filtered_df is None:
+            raise TypeError("Ожидается тип данных DataFrame")
+        for column in ["Сумма платежа", "Статус", "Категория"]:
+            if column not in filtered_df.columns:
+                raise ValueError("Переданный DataFrame не содержит необходимые, для обработки, поля")
+
+        # Сумма расходов
         df_costs = filtered_df.loc[(filtered_df["Сумма платежа"] < 0) & (filtered_df["Статус"] == "OK")]
         total_sum_costs = df_costs["Сумма платежа"].sum()
-        print(total_sum_costs)
-        # Траты по категориям и поступлениям
-        group_by_category = df_costs.groupby(filtered_df["Категория"])
-        print(group_by_category)
-        sum_costs_by_category = group_by_category["Сумма платежа"].sum()
-        print(sum_costs_by_category)
-        top_sum_costs_by_category = sum_costs_by_category.sort_values(ascending=True).head(7)
-        print(top_sum_costs_by_category)
+        json_result["expenses"]["total_amount"] = round(abs(total_sum_costs))
+
+        # Основные расходы
+        df_main = df_costs.loc[~df_costs["Категория"].isin(["Наличные", "Переводы"])]
+        group_by_category_main = df_main.groupby(df_costs["Категория"])
+        sum_by_category_main = group_by_category_main["Сумма платежа"].sum().sort_values(ascending=True).head(7)
+        json_result["expenses"]["main"] = get_list_categories_with_amounts(sum_by_category_main)
+
+        # Переводы и наличные
+        df_transfer_cash = df_costs.loc[df_costs["Категория"].isin(["Наличные", "Переводы"])]
+        group_by_category_tc = df_transfer_cash.groupby(df_costs["Категория"])
+        sum_by_category_tc = group_by_category_tc["Сумма платежа"].sum().sort_values(ascending=True)
+        json_result["expenses"]["transfers_and_cash"] = get_list_categories_with_amounts(sum_by_category_tc)
+
+        # Сумма поступлений
+        df_receipt = filtered_df.loc[(filtered_df["Сумма платежа"] > 0) & (filtered_df["Статус"] == "OK")]
+        total_sum_receipt = df_receipt["Сумма платежа"].sum()
+        json_result["income"]["total_amount"] = round(total_sum_receipt)
+
+        # Поступления по категориям
+        group_by_category_receipt = df_receipt.groupby(df_receipt["Категория"])
+        sum_by_category_receipt = group_by_category_receipt["Сумма платежа"].sum().sort_values(ascending=False)
+        json_result["income"]["main"] = get_list_categories_with_amounts(sum_by_category_receipt)
+
+        # Валюта и акции
+        json_result["currency_rates"] = get_price_currencies_user(user_settings)
+        json_result["stock_prices"] = get_price_stocks_user(user_settings)
 
 
-get_json_events("2021-09-22 11:11:11", "Y")
+
+
+
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return json.dumps(json_result, indent=4, ensure_ascii=False)
+
+
+
+
+
+# res = get_json_events("2021-09-22 11:11:11", "M")
+# print(res)
+
+# cur = get_price_currencies_user(user_settings)
+# print(cur)
+
+# st = get_price_stocks_user(user_settings)
+# print(st)
