@@ -153,10 +153,6 @@ def get_json_events(date: str, range_data: str = "M"):
         json_result["currency_rates"] = get_price_currencies_user(user_settings)
         json_result["stock_prices"] = get_price_stocks_user(user_settings)
 
-
-
-
-
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except ValueError as val_ex:
