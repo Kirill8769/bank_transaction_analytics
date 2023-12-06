@@ -4,7 +4,7 @@ import pandas as pd
 from src.config import PATH_PROJECT
 from src.files import get_df_operations
 from src.reports import spending_by_category
-from src.services import categories_of_increased_cashback, invest_copilka
+from src.services import categories_of_increased_cashback, invest_moneybox
 from src.views import get_json_dashboard_info, get_json_events
 
 
@@ -23,12 +23,13 @@ def main() -> None:
     if df_operations is not None:
 
         # Выгодные категории повышенного кэшбэка
-        # categories_of_increased_cashback(df_operations, 2020, 3)
-        # print("[+] Save cashback")
+        categories_of_increased_cashback(df_operations, 2020, 3)
+        print("[+] Save cashback")
 
         # Инвесткопилка
-        transactions = df_operations[["Дата операции", "Сумма операции"]].to_dict(orient="records")
-        invest_copilka(month="2020-05", transactions=transactions, limit=50)
+        transactions: list[dict] = df_operations.to_dict(orient="records")
+        invest_moneybox(month="2020-04", transactions=transactions, limit=50)
+        print(f"[+] Save invest moneybox")
 
         # Траты по категории
         # spending_by_category(df_operations, "Супермаркеты", "2019-01-22 11:11:11")

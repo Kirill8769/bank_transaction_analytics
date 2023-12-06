@@ -52,10 +52,26 @@ def get_user_settings() -> dict:
         return settings
     
 
-def save_result_in_json(filename: str, json_obj: str) -> None:
-    file_path = os.path.join(PATH_PROJECT, 'results', filename)
-    with open(file_path, "w", encoding="UTF-8") as file:
-        json.dump(json_obj, file, indent=4, ensure_ascii=False)
+def save_result_in_json(filename: str, json_obj: list[dict]) -> None:
+    """
+    Сохраняет переданный Список словарей в файл в формате JSON.
+
+    :param filename: Имя файла
+    :param json_obj: Список словарей
+    :return: None
+    """
+    try:
+        if not isinstance(filename, str):
+            raise TypeError("Переден неверный тип данных объекта filename, ожидатется строка")
+        if not isinstance(json_obj, list):
+            raise TypeError("Переден неверный тип данных объекта json_obj, ожидатется список словарей")
+        file_path = os.path.join(PATH_PROJECT, 'results', filename)
+        with open(file_path, "w", encoding="UTF-8") as file:
+            json.dump(json_obj, file, indent=4, ensure_ascii=False)
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
 
 
 user_settings = get_user_settings()
