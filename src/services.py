@@ -1,12 +1,12 @@
-import json
-
 import pandas as pd
+from datetime import datetime
+from typing import Any
 
 from src.files import save_result_in_json
 from src.loggers import logger
 
 
-def get_categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) -> str:
+def categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) -> str:
     """
     Анализирует данные по кэшбэку за определенный год и месяц, возвращает JSON-строку со списком
     категорий с увеличенным кэшбэком, отсортированных по убыванию.
@@ -44,3 +44,23 @@ def get_categories_of_increased_cashback(data: pd.DataFrame, year: int, month: i
     finally:
         filename = f"cashback_info_{year}_{month}.json"
         save_result_in_json(filename=filename, json_obj=json_result)
+
+
+def invest_copilka(month: str, transactions: list[dict[str, Any]], limit: int) -> float:
+    """
+    Функция рассчитывает возможные накопления по предоставленным данным
+
+    :param month: Месяц, для которого рассчитывается отложенная сумма (строка в формате YYYY-MM)
+    :param transactions: Список словарей, содержащий информацию о транзакциях, в которых содержатся следующие поля:
+        Дата операции - Дата, когда произошла транзакция (строка в формате YYYY-MM-DD) 
+        Сумма операции - Сумма транзакции в оригинальной валюте (число)
+    :param limit: Предел, до которого нужно округлять суммы операций (целое число)
+    :return: Возвращает сумму, которую удалось бы отложить в инвесткопилку.
+    """
+    format_date = datetime.strptime(month, "%Y-%m").strftime("%m.%Y")
+    print(format_date)
+    for transaction in transactions:
+        print(transaction)
+        if format_date in transaction["Дата операции"]:
+            print("OK")
+            break
