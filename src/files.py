@@ -63,8 +63,8 @@ def save_result_in_json(filename: str, json_obj: dict[Any, Any]) -> None:
     try:
         if not isinstance(filename, str):
             raise TypeError("Переден неверный тип данных объекта filename, ожидатется строка")
-        # if not isinstance(json_obj, list):
-        #     raise TypeError("Переден неверный тип данных объекта json_obj, ожидатется список словарей")
+        if not isinstance(json_obj, list | dict):
+            raise TypeError("Переден неверный тип данных объекта json_obj, ожидатется список словарей")
         file_path = os.path.join(PATH_PROJECT, 'results', filename)
         with open(file_path, "w", encoding="UTF-8") as file:
             json.dump(json_obj, file, indent=4, ensure_ascii=False)
