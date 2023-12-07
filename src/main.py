@@ -3,7 +3,7 @@ import pandas as pd
 
 from src.config import PATH_PROJECT
 from src.files import get_df_operations
-from src.reports import spending_by_category
+from src.reports import spending_by_category, spending_by_weekday
 from src.services import categories_of_increased_cashback, invest_moneybox, simple_search, search_by_phone_number, search_for_transfers_to_individuals
 from src.views import get_json_dashboard_info, get_json_events
 
@@ -33,7 +33,11 @@ def main() -> None:
 
         # Траты по категории
         # spending_by_category(df=df_operations, category="Супермаркеты", date="2019-01-22 11:11:11")
-        # print("[+] Report OK") # Выгружает за все года. Посмотреть что не так
+        # print("[+] Report spending by category OK") # Выгружает за все года. Посмотреть что не так
+
+        # Траты по дням недели
+        spending_by_weekday(df=df_operations, date="2019-01-22 11:11:11")
+        print("[+] Report spending by weekday OK")
 
     # Простой поиск
     # simple_search(query="магнит")
