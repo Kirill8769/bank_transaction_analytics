@@ -2,7 +2,8 @@ import pandas as pd
 
 from src.files import get_df_operations
 from src.reports import spending_by_category, spending_by_weekday, spending_workday_weekend
-from src.services import categories_of_increased_cashback, invest_moneybox, simple_search, search_by_phone_number, search_for_transfers_to_individuals
+from src.services import (categories_of_increased_cashback, invest_moneybox, search_by_phone_number,
+                          search_for_transfers_to_individuals, simple_search)
 from src.views import get_json_dashboard_info, get_json_events
 
 
@@ -10,9 +11,9 @@ def main() -> None:
     """
     Основная функция программы.
 
-    Выводит информацию о различных аспектах финансов и трат, такие как главная информация, события, категории повышенного кэшбэка,
-    инвестиции в копилку, траты по категории, траты по дням недели и в рабочие/выходные дни, простой поиск, поиск по телефонным номерам
-    и поиск переводов физическим лицам.
+    Выводит информацию о различных аспектах финансов и трат, такие как главная информация, события,
+    категории повышенного кэшбэка, инвестиции в копилку, траты по категории, траты по дням недели и в рабочие/выходные
+    дни, простой поиск, поиск по телефонным номерам и поиск переводов физическим лицам.
 
     :return: None
     """
@@ -61,6 +62,7 @@ def main() -> None:
     # Поиск переводов физическим лицам
     search_for_transfers_to_individuals()
     print("[+] search for transfers to individuals")
+
     print("[+] Finish")
 
 

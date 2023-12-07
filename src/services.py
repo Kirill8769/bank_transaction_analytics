@@ -1,10 +1,11 @@
-import pandas as pd
+import json
+import re
 from datetime import datetime
 from typing import Any
-import re
-import json
 
-from src.files import save_result_in_json, get_df_operations
+import pandas as pd
+
+from src.files import get_df_operations, save_result_in_json
 from src.loggers import logger
 
 
@@ -18,11 +19,7 @@ def categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) 
     :param month: Месяц для анализа.
     :return: None
     """
-    json_result = {
-        "year": 0,
-        "month": 0,
-        "result": []
-    }
+    json_result: dict = {"year": 0, "month": 0, "result": []}
     try:
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Передан неверный тип данных объекта data, ожидается DataFrame")
@@ -59,7 +56,7 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
 
     :param month: Месяц, для которого рассчитывается отложенная сумма (строка в формате YYYY-MM)
     :param transactions: Список словарей, содержащий информацию о транзакциях, в которых содержатся следующие поля:
-        Дата операции - Дата, когда произошла транзакция (строка в формате YYYY-MM-DD) 
+        Дата операции - Дата, когда произошла транзакция (строка в формате YYYY-MM-DD)
         Сумма операции - Сумма транзакции в оригинальной валюте (число)
     :param limit: Предел, до которого нужно округлять суммы операций (целое число)
     :return: None
@@ -78,11 +75,12 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
             raise ValueError("Переден неверный формат объекта month, ожидается строка в формате YYYY-MM")
         format_date = datetime.strptime(month, "%Y-%m").strftime("%m.%Y")
         for transaction in transactions:
-
-            if format_date in transaction["Дата операции"].strftime("%m.%Y")\
-                    and transaction["Статус"] == "OK"\
-                    and transaction["Категория"] not in ["Переводы", "Наличные"]\
-                    and transaction["Сумма операции"] < 0:
+            if (
+                format_date in transaction["Дата операции"].strftime("%m.%Y")
+                and transaction["Статус"] == "OK"
+                and transaction["Категория"] not in ["Переводы", "Наличные"]
+                and transaction["Сумма операции"] < 0
+            ):
                 sum_pay = abs(transaction["Сумма операции"])
                 sum_pay_rounding = (sum_pay // limit) * limit + limit
                 total += sum_pay_rounding - sum_pay
@@ -95,7 +93,7 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"invest_moneybox_result.json"
+        filename = "invest_moneybox_result.json"
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
@@ -106,10 +104,7 @@ def simple_search(query: str) -> None:
     :param query: Строка запроса для поиска в описаниях транзакций.
     :return: None
     """
-    json_result = {
-        "query": query,
-        "result": []
-    }
+    json_result: dict = {"query": query, "result": []}
     try:
         if not isinstance(query, str):
             raise TypeError("Переден неверный тип данных объекта query, ожидатется строка")
@@ -124,7 +119,7 @@ def simple_search(query: str) -> None:
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"simple_search.json"
+        filename = "simple_search.json"
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
@@ -134,22 +129,19 @@ def search_by_phone_number() -> None:
 
     :return: None
     """
-    json_result = {
-        "result": []
-    }
+    json_result: dict = {"result": []}
     try:
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
-        pattern = re.compile(r"\+?[78][- ]?\d{3}[- ]?\d{3}[- ]?\d{2}[- ]?\d{2}")
-        search_result = df[df["Описание"].str.findall(pattern).apply(bool)]
+        search_result = df[df["Описание"].str.findall(r"\+?[78][- ]?\d{3}[- ]?\d{3}[- ]?\d{2}[- ]?\d{2}").apply(bool)]
         json_result["result"] = json.loads(search_result.to_json(orient="records"))
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"search_by_phone_number.json"
+        filename = "search_by_phone_number.json"
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
@@ -159,20 +151,17 @@ def search_for_transfers_to_individuals() -> None:
 
     :return: None
     """
-    json_result = {
-        "result": []
-    }
+    json_result: dict = {"result": []}
     try:
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
-        pattern = re.compile(r"[А-Я][а-я]+ [А-Я]\.")
-        search_result = df[(df["Категория"] == "Переводы") & (df["Описание"].str.findall(pattern))]
+        search_result = df[(df["Категория"] == "Переводы") & df["Описание"].str.contains(r"[А-Я][а-я]+ [А-Я]\.")]
         json_result["result"] = json.loads(search_result.to_json(orient="records"))
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"search_for_transfers_to_individuals.json"
+        filename = "search_for_transfers_to_individuals.json"
         save_result_in_json(filename=filename, json_obj=json_result)

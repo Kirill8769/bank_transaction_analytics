@@ -119,8 +119,9 @@ def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
             end_week = start_week + timedelta(days=6)
             result_df = df.loc[(df["Дата операции"] >= start_week) & (df["Дата операции"] <= end_week)]
         elif range_data == "M":
-            result_df = df.loc[(df["Дата операции"].dt.year == date_dt.year) &
-                               (df["Дата операции"].dt.month == date_dt.month)]
+            result_df = df.loc[
+                (df["Дата операции"].dt.year == date_dt.year) & (df["Дата операции"].dt.month == date_dt.month)
+            ]
         elif range_data == "Y":
             result_df = df.loc[df["Дата операции"].dt.year == date_dt.year]
         else:
@@ -133,23 +134,21 @@ def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
         return result_df
-    
 
-def get_list_categories_with_amounts(df_to_handle: pd.Series) -> list:
+
+def get_list_categories_with_amounts(df_to_handle: pd.Series) -> list | list[dict]:
     """
     Функция создает список словарей, в которых каждый словарь содержит информацию о категории и сумме трат по ней.
 
     :param df_to_handle: Series с данными о суммах трат по категориям.
     :return: Список словарей с категориями и суммами трат или пустой список в случае ошибки.
     """
-    result = []
+    result: list | list[dict] = []
     try:
         if isinstance(df_to_handle, pd.Series) and not df_to_handle.empty:
             for category, sum_pay in df_to_handle.items():
                 if isinstance(category, str) and isinstance(sum_pay, float):
-                    result.append(
-                        {"category": category, "amount": round(abs(sum_pay))}
-                    )
+                    result.append({"category": category, "amount": round(abs(sum_pay))})
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:

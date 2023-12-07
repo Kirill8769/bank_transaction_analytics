@@ -7,22 +7,27 @@ from src.reports import spending_by_category, spending_by_weekday, spending_work
 @pytest.fixture()
 def user_transactions():
     transactions = {
-        "Дата операции": ["05.11.2022 00:00:00", "20.11.2022 00:00:00",
-                          "01.01.2023 00:00:00", "01.06.2023 00:00:00"],
+        "Дата операции": ["05.11.2022 00:00:00", "20.11.2022 00:00:00", "01.01.2023 00:00:00", "01.06.2023 00:00:00"],
         "Категория": ["Мебель", "Супермаркет", "Мебель", "Мебель"],
-        "Статус": ["OK", "OK", "OK", "OK",],
-        "Сумма операции": [-120, -200, -100, -1500]
-
+        "Статус": [
+            "OK",
+            "OK",
+            "OK",
+            "OK",
+        ],
+        "Сумма операции": [-120, -200, -100, -1500],
     }
     return pd.DataFrame(transactions)
 
 
 def test_spending_by_category_correct_answer(user_transactions):
     expected = pd.DataFrame(
-        {"Дата операции": [pd.to_datetime("01.06.2023 00:00:00", format="%d.%m.%Y %H:%M:%S")],
-         "Категория": ["Мебель"],
-         "Статус": ["OK"],
-         "Сумма операции": [-1500]}
+        {
+            "Дата операции": [pd.to_datetime("01.06.2023 00:00:00", format="%d.%m.%Y %H:%M:%S")],
+            "Категория": ["Мебель"],
+            "Статус": ["OK"],
+            "Сумма операции": [-1500],
+        }
     )
     result = spending_by_category(user_transactions, "Мебель", "2023-06-22 00:00:00")
     pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)

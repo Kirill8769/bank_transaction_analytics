@@ -1,17 +1,9 @@
-from typing import Any
-
 import pandas as pd
 
-from src.files import user_settings, save_result_in_json
+from src.files import save_result_in_json, user_settings
 from src.loggers import logger
-from src.utils import (
-    get_filtered_df,
-    get_list_categories_with_amounts,
-    get_price_currencies_user,
-    get_price_stocks_user,
-    get_time_of_day,
-    get_df_by_interval,
-)
+from src.utils import (get_df_by_interval, get_filtered_df, get_list_categories_with_amounts,
+                       get_price_currencies_user, get_price_stocks_user, get_time_of_day)
 
 
 def get_json_dashboard_info(date: str) -> None:
@@ -27,7 +19,7 @@ def get_json_dashboard_info(date: str) -> None:
     :return: None
     """
     widget_message = get_time_of_day()
-    json_result = {
+    json_result: dict = {
         "greeting": widget_message,
         "report_date": "",
         "cards": [],
@@ -79,34 +71,27 @@ def get_json_dashboard_info(date: str) -> None:
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"main_info.json"
+        filename = "main_info.json"
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
 def get_json_events(date: str, range_data: str = "M") -> None:
     """
-    Функция енерирует и сохраняет отчет о финансовых событиях в формате JSON на основе заданной даты и диапазона данных.
+    Функция енерирует и сохраняет отчет о финансовых событиях в формате JSON
+    на основе заданной даты и диапазона данных.
 
     :param date: Дата для формирования отчета в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС".
     :param range_data: Диапазон данных для анализа.
     Возможные значения: "W" (неделя), "M" (месяц), "Y" (год), "ALL" (все).
     :return: None
     """
-    json_result = {
+    json_result: dict = {
         "report_date": "",
         "range_date": "",
-        "expenses":
-            {
-                "total_amount": 0.0,
-                "main": [],
-                "transfers_and_cash": []
-            },
-        "income": {
-            "total_amount": 0.0,
-            "main": []
-        },
+        "expenses": {"total_amount": 0.0, "main": [], "transfers_and_cash": []},
+        "income": {"total_amount": 0.0, "main": []},
         "currency_rates": [],
-        "stock_prices": []
+        "stock_prices": [],
     }
     try:
         filtered_df = get_filtered_df(date=date, range_data=range_data)
@@ -156,5 +141,5 @@ def get_json_events(date: str, range_data: str = "M") -> None:
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
-        filename = f"events_info.json"
+        filename = "events_info.json"
         save_result_in_json(filename=filename, json_obj=json_result)

@@ -51,7 +51,7 @@ def get_user_settings() -> dict:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
         return settings
-    
+
 
 def save_result_in_json(filename: str, json_obj: dict[Any, Any]) -> None:
     """
@@ -66,7 +66,7 @@ def save_result_in_json(filename: str, json_obj: dict[Any, Any]) -> None:
             raise TypeError("Переден неверный тип данных объекта filename, ожидатется строка")
         if not isinstance(json_obj, list | dict):
             raise TypeError("Переден неверный тип данных объекта json_obj, ожидатется список словарей")
-        file_path = os.path.join(PATH_PROJECT, 'results', filename)
+        file_path = os.path.join(PATH_PROJECT, "results", filename)
         with open(file_path, "w", encoding="UTF-8") as file:
             json.dump(json_obj, file, indent=4, ensure_ascii=False)
     except TypeError as type_ex:

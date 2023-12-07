@@ -15,7 +15,8 @@ def spending_by_category(df: pd.DataFrame, category: str, date: str | None = Non
 
     :param df: DataFrame с данными о транзакциях.
     :param category: Категория трат, которую следует проанализировать.
-    :param date: Дата окончания периода анализа в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС" или None для использования текущей даты.
+    :param date: Дата окончания периода анализа в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
+    или None для использования текущей даты.
     :return: DataFrame с отфильтрованными транзакциями по указанной
     категории за заданный период или None в случае ошибки.
     """
@@ -37,11 +38,11 @@ def spending_by_category(df: pd.DataFrame, category: str, date: str | None = Non
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         back_date_dt = user_date_dt - relativedelta(months=3)
         filtered_df = df[
-            (df["Статус"] == "OK") &
-            (df["Дата операции"] >= back_date_dt) &
-            (df["Дата операции"] <= user_date_dt) &
-            (df["Сумма операции"] < 0) &
-            (df["Категория"] == category)
+            (df["Статус"] == "OK")
+            & (df["Дата операции"] >= back_date_dt)
+            & (df["Дата операции"] <= user_date_dt)
+            & (df["Сумма операции"] < 0)
+            & (df["Категория"] == category)
         ]
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
@@ -59,13 +60,11 @@ def spending_by_weekday(df: pd.DataFrame, date: str | None = None) -> pd.DataFra
     Функция возвращает средние траты в каждый из дней недели за последние 3 месяца (от переданной даты).
 
     :param df: DataFrame с данными о транзакциях.
-    :param date: Дата окончания периода анализа в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС" или None для использования текущей даты.
+    :param date: Дата окончания периода анализа в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
+    или None для использования текущей даты.
     :return: DataFrame с подсчитанными данными за заданный период
     """
-    result_df = {
-            "Дни недели": [],
-            "Средняя сумма платежей": []
-        }
+    result_df: dict = {"Дни недели": [], "Средняя сумма платежей": []}
     try:
         if date is None:
             user_date_dt: datetime | None = datetime.now()
@@ -78,22 +77,14 @@ def spending_by_weekday(df: pd.DataFrame, date: str | None = None) -> pd.DataFra
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         back_date_dt = user_date_dt - relativedelta(months=3)
         filtered_df = df[
-            (df["Статус"] == "OK") &
-            (df["Дата операции"] >= back_date_dt) &
-            (df["Дата операции"] <= user_date_dt) &
-            (df["Сумма операции"] < 0)
+            (df["Статус"] == "OK")
+            & (df["Дата операции"] >= back_date_dt)
+            & (df["Дата операции"] <= user_date_dt)
+            & (df["Сумма операции"] < 0)
         ]
         group_by_weekday = filtered_df.groupby(df["Дата операции"].dt.weekday)
         avg_sum_by_weekday = group_by_weekday["Сумма платежа"].mean()
-        week_days = [
-            "Понедельник",
-            "Вторник",
-            "Среда",
-            "Четверг",
-            "Пятница",
-            "Суббота",
-            "Воскресенье"
-            ]
+        week_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
         if isinstance(avg_sum_by_weekday, pd.Series) and not avg_sum_by_weekday.empty:
             for i, mean_pay in avg_sum_by_weekday.items():
                 result_df["Дни недели"].append(week_days[i])
@@ -114,15 +105,13 @@ def spending_workday_weekend(df: pd.DataFrame, date: str | None = None) -> pd.Da
     Функция выводит средние траты в рабочий и в выходной день за последние 3 месяца (от переданной даты).
 
     :param df: DataFrame с данными о транзакциях.
-    :param date: Дата окончания периода анализа в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС" или None для использования текущей даты.
+    :param date: Дата окончания периода анализа в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
+    или None для использования текущей даты.
     :return: DataFrame с подсчитанными данными за заданный период
     """
     workday_pays = 0.0
     weekend_pays = 0.0
-    result_df = {
-        "Дни недели": ["Рабочие", "Выходные"],
-        "Средняя сумма платежей": [0.0, 0.0]
-    }
+    result_df: dict = {"Дни недели": ["Рабочие", "Выходные"], "Средняя сумма платежей": [0.0, 0.0]}
     try:
         if date is None:
             user_date_dt: datetime | None = datetime.now()
@@ -135,11 +124,11 @@ def spending_workday_weekend(df: pd.DataFrame, date: str | None = None) -> pd.Da
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         back_date_dt = user_date_dt - relativedelta(months=3)
         filtered_df = df[
-            (df["Статус"] == "OK") &
-            (df["Дата операции"] >= back_date_dt) &
-            (df["Дата операции"] <= user_date_dt) &
-            (df["Сумма операции"] < 0)
-            ]
+            (df["Статус"] == "OK")
+            & (df["Дата операции"] >= back_date_dt)
+            & (df["Дата операции"] <= user_date_dt)
+            & (df["Сумма операции"] < 0)
+        ]
         group_by_weekday = filtered_df.groupby(df["Дата операции"].dt.weekday)
         avg_sum_by_weekday = group_by_weekday["Сумма платежа"].mean()
 

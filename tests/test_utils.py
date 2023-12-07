@@ -4,14 +4,8 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import pytest
 
-from src.utils import (
-    API_MARKETSTACK,
-    check_date,
-    get_price_currencies_user,
-    get_price_stocks_user,
-    get_time_of_day,
-    get_df_by_interval,
-)
+from src.utils import (API_MARKETSTACK, check_date, get_df_by_interval, get_price_currencies_user,
+                       get_price_stocks_user, get_time_of_day)
 
 
 def test_check_date_correct():
@@ -61,7 +55,10 @@ def test_get_price_currencies_user_ok_connect(mock_get, fix_user_settings):
     mock_response.status_code = 200
     mock_response.json.return_value = {"Valute": {"USD": {"Value": 35.0}, "EUR": {"Value": 40.0}}}
     mock_get.return_value = mock_response
-    assert get_price_currencies_user(fix_user_settings) == [{'currency': 'USD', 'rate': 35.0}, {'currency': 'EUR', 'rate': 40.0}]
+    assert get_price_currencies_user(fix_user_settings) == [
+        {"currency": "USD", "rate": 35.0},
+        {"currency": "EUR", "rate": 40.0},
+    ]
     mock_get.assert_called_once_with("https://www.cbr-xml-daily.ru/daily_json.js")
 
 
@@ -92,7 +89,7 @@ def test_get_price_stocks_user_ok_connect(mock_get, fix_user_settings):
     mock_response.status_code = 200
     mock_response.json.return_value = {"data": [{"symbol": "TSLA", "last": 600.0}]}
     mock_get.return_value = mock_response
-    assert get_price_stocks_user(fix_user_settings) == [{'price': 600.0, 'stock': 'TSLA'}]
+    assert get_price_stocks_user(fix_user_settings) == [{"price": 600.0, "stock": "TSLA"}]
     params = {"access_key": API_MARKETSTACK, "symbols": "TSLA"}
     mock_get.assert_called_once_with("http://api.marketstack.com/v1/intraday/latest", params)
 
