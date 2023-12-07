@@ -40,7 +40,7 @@ def main() -> None:
 
         # Траты по категории
         spending_by_category(df=df_operations, category="Супермаркеты", date="2019-01-22 11:11:11")
-        print("[+] Report spending by category OK") # Выгружает за все года. Посмотреть что не так
+        print("[+] Report spending by category OK")
 
         # Траты по дням недели
         spending_by_weekday(df=df_operations, date="2020-10-22 11:11:11")
