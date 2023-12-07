@@ -36,7 +36,7 @@ def main() -> None:
         # print("[+] Report OK") # Выгружает за все года. Посмотреть что не так
 
     # Простой поиск
-    simple_search("Магнит")
+    simple_search("магнит")
     print("[+] Save simple search")
 
 

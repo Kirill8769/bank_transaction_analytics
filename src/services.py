@@ -108,11 +108,9 @@ def simple_search(query: str):
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
-        search_result = df.loc[df["Описание"].str.lower().isin([query.lower()])].to_json(orient="records")
-
-        json_result["result"].append(search_result)
-        print(json_result)
-        print(type(json_result))
+        search_result = df[df["Описание"].str.lower().str.contains(query.lower())]
+        result_search_dict = search_result.to_dict(orient="records")
+        json_result["result"] = result_search_dict
     except ValueError as val_ex:
         logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
     except Exception as ex:
@@ -120,3 +118,4 @@ def simple_search(query: str):
     finally:
         filename = f"simple_search.json"
         save_result_in_json(filename=filename, json_obj=json_result)
+        
