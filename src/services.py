@@ -13,7 +13,7 @@ def categories_of_increased_cashback(data: pd.DataFrame, year: int, month: int) 
     Анализирует данные по кэшбэку за определенный год и месяц, и записывает в json файл список
     со словарями категорий с увеличенным кэшбэком, отсортированных по убыванию.
 
-    :param data: Pandas DataFrame с данными о платежах.
+    :param data: DataFrame с данными о платежах.
     :param year: Год для анализа.
     :param month: Месяц для анализа.
     :return: None
@@ -73,12 +73,13 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
             raise TypeError("Переден неверный тип данных объекта transactions, ожидатется список словарей")
         if not isinstance(limit, int):
             raise TypeError("Переден неверный тип данных объекта limit, ожидатется целое число")
-        re_date = re.search(r"\d{4}-\d{2}", month)
-        if not re_date[0]:
+        re_date = re.search(r"^\d{4}-\d{2}$", month)
+        if not re_date:
             raise ValueError("Переден неверный формат объекта month, ожидается строка в формате YYYY-MM")
-        format_date = datetime.strptime(re_date[0], "%Y-%m").strftime("%m.%Y")
+        format_date = datetime.strptime(month, "%Y-%m").strftime("%m.%Y")
         for transaction in transactions:
-            if format_date in transaction["Дата операции"]\
+
+            if format_date in transaction["Дата операции"].strftime("%m.%Y")\
                     and transaction["Статус"] == "OK"\
                     and transaction["Категория"] not in ["Переводы", "Наличные"]\
                     and transaction["Сумма операции"] < 0:
@@ -86,7 +87,7 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
                 sum_pay_rounding = (sum_pay // limit) * limit + limit
                 total += sum_pay_rounding - sum_pay
         else:
-            json_result[0]["total"] = round(total, 2)
+            json_result["total"] = round(total, 2)
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except ValueError as val_ex:
@@ -98,7 +99,13 @@ def invest_moneybox(month: str, transactions: list[dict[str, Any]], limit: int) 
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
-def simple_search(query: str):
+def simple_search(query: str) -> None:
+    """
+    Выполняет простой поиск в описании транзакций по заданному запросу и сохраняет результат в JSON-файл.
+
+    :param query: Строка запроса для поиска в описаниях транзакций.
+    :return: None
+    """
     json_result = {
         "query": query,
         "result": []
@@ -122,6 +129,11 @@ def simple_search(query: str):
 
 
 def search_by_phone_number() -> None:
+    """
+    Выполняет поиск транзакций по наличию телефонных номеров в описаниях и сохраняет результат в JSON-файл.
+
+    :return: None
+    """
     json_result = {
         "result": []
     }
@@ -141,7 +153,12 @@ def search_by_phone_number() -> None:
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
-def search_for_transfers_to_individuals():
+def search_for_transfers_to_individuals() -> None:
+    """
+    Выполняет поиск транзакций по категории "Переводы" и сохраняет результат в JSON-файл.
+
+    :return: None
+    """
     json_result = {
         "result": []
     }

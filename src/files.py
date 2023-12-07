@@ -12,7 +12,7 @@ def get_df_operations() -> pd.DataFrame | None:
     """
     Возвращает DataFrame с данными операций пользователя из файла.
 
-    :return: Путь к файлу с операциями пользователя
+    :return: Путь к файлу с операциями пользователя или None в случае ошибки
     :raises ValueError: Если файл с операциями пользователя не найден.
     :raises Exception: Если возникает неожиданная ошибка при чтении файла.
     """
@@ -58,7 +58,8 @@ def save_result_in_json(filename: str, json_obj: dict[Any, Any]) -> None:
     Сохраняет переданный Список словарей в файл в формате JSON.
 
     :param filename: Имя файла
-    :param json_obj: Список словарей
+    :param json_obj: JSON объект python
+    :return: None
     """
     try:
         if not isinstance(filename, str):

@@ -18,7 +18,7 @@ def check_date(date_checked: str) -> datetime | None:
     Проверяет строку с датой на соответствие формату и возвращает объект datetime.
 
     :param date_checked: Строка с датой в формате YYYY-MM-DD HH:MM:SS.
-    :return: Объект datetime, представляющий дату и время.
+    :return: Объект datetime, представляющий дату и время или None в случае ошибки.
     :raises TypeError: Если передан неверный тип данных в date_checked (ожидается str).
     :raises ValueError: Если передан неверный формат даты (ожидается YYYY-MM-DD HH:MM:SS).
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
@@ -44,8 +44,7 @@ def check_date(date_checked: str) -> datetime | None:
 
 def get_time_of_day() -> str:
     """
-    Фунция вычисляет какое сейчас время суток и формирует
-    приветственное сообщение
+    Фунция вычисляет какое сейчас время суток и формирует приветственное сообщение
 
     :return: Приветственное сообщение
     """
@@ -61,15 +60,12 @@ def get_time_of_day() -> str:
     return message
 
 
-def get_df_by_interval(date: str) -> pd.DataFrame |tuple[None | pd.DataFrame, None | pd.Series]:
+def get_df_by_interval(date: str) -> pd.DataFrame | None:
     """
-    Получает операции пользователя из файла, в заданном временном интервале.
+    Формирует операции пользователя из файла, в заданном временном интервале.
 
-    :return: Кортеж из двух элементов: DataFrame с топ-5 транзакциями и Series с общей суммой платежей по картам.
-    :raises TypeError: Если start_date или end_date не являются объектами datetime.
-    :raises ValueError: Если файл с операциями не найден или если возникли проблемы с фильтрацией данных.
+    :return: DataFrame с операциями пользователя с начала месяца и до переданной даты или None в случае ошибки
     """
-
     result_df: pd.DataFrame | None = None
     try:
         user_date = check_date(date)
@@ -97,13 +93,21 @@ def get_df_by_interval(date: str) -> pd.DataFrame |tuple[None | pd.DataFrame, No
 
 
 def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
+    """
+    Функция выполняет фильтрацию операций на основе переданной даты и диапазона данных.
+
+    :param date: Дата для фильтрации в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС".
+    :param range_data: Диапазон данных для фильтрации.
+    Возможные значения: "W" (неделя), "M" (месяц), "Y" (год), "ALL" (все).
+    :return: DataFrame с отфильтрованными операциями или None в случае ошибки.
+    """
     result_df: pd.DataFrame | None = None
     try:
         date_dt = check_date(date)
         if not isinstance(date_dt, datetime):
             raise ValueError("Проблема с переданной датой, смотрите логи")
         if not isinstance(range_data, str) or range_data.upper() not in ["W", "M", "Y", "ALL"]:
-            raise ValueError('Передан неверный диапазон данных, ожидается тип str. Возможные значения: "W", "M", "Y", "ALL"')
+            raise ValueError('Передано неверное значение в range_data. Возможные значения: "W", "M", "Y", "ALL"')
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
@@ -115,7 +119,8 @@ def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
             end_week = start_week + timedelta(days=6)
             result_df = df.loc[(df["Дата операции"] >= start_week) & (df["Дата операции"] <= end_week)]
         elif range_data == "M":
-            result_df = df.loc[(df["Дата операции"].dt.year == date_dt.year) & (df["Дата операции"].dt.month == date_dt.month)]
+            result_df = df.loc[(df["Дата операции"].dt.year == date_dt.year) &
+                               (df["Дата операции"].dt.month == date_dt.month)]
         elif range_data == "Y":
             result_df = df.loc[df["Дата операции"].dt.year == date_dt.year]
         else:
@@ -131,6 +136,12 @@ def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
     
 
 def get_list_categories_with_amounts(df_to_handle: pd.Series) -> list:
+    """
+    Функция создает список словарей, в которых каждый словарь содержит информацию о категории и сумме трат по ней.
+
+    :param df_to_handle: Series с данными о суммах трат по категориям.
+    :return: Список словарей с категориями и суммами трат или пустой список в случае ошибки.
+    """
     result = []
     try:
         if isinstance(df_to_handle, pd.Series) and not df_to_handle.empty:
@@ -188,8 +199,6 @@ def get_price_currencies_user(user_settings_dict: dict) -> list | list[dict[str,
 
     :param user_settings_dict: Словарь с настройками пользователя
     :return: Список словарей с курсами валют.
-    :raises ConnectionError: Если возникает ошибка подключения к API для получения курсов валют.
-    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
     result = []
     try:

@@ -6,6 +6,11 @@ from src.config import PATH_PROJECT
 
 
 def my_logger() -> logging.Logger:
+    """
+    Конфигурирует и возвращает пользовательский логгер.
+
+    :return: Экземпляр настроенного логгера.
+    """
     try:
         file_logger = logging.getLogger("logger")
         file_logger.setLevel("DEBUG")
@@ -21,7 +26,6 @@ def my_logger() -> logging.Logger:
         ex_logger = logging.getLogger()
         ex_logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
         return ex_logger
-
 
 
 logger = my_logger()
