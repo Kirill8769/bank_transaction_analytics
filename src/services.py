@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 from typing import Any
 import re
+import json
 
 from src.files import save_result_in_json, get_df_operations
 from src.loggers import logger
@@ -120,31 +121,41 @@ def simple_search(query: str):
         save_result_in_json(filename=filename, json_obj=json_result)
 
 
-def search_by_phone_number(phone_number: str) -> None:
+def search_by_phone_number() -> None:
     json_result = {
-        "query": phone_number,
         "result": []
     }
     try:
-        if not isinstance(phone_number, str):
-            raise TypeError("Переден неверный тип данных объекта phone_number, ожидатется строка")
-        pattern = re.compile(r"\+7 \d{3} \d{3}-\d{2}-\d{2}")
-        re_phone = pattern.search(phone_number)
-        if not re_phone:
-            raise ValueError('Передан неверный формат телефона, ожидается "+7 995 555-55-55"')
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
-        df_pattern = re.compile(fr"{re.escape(phone_number)}")
-        search_result = df[df["Описание"].str.findall(df_pattern).apply(bool)]
-        result_search_dict = search_result.to_dict(orient="records")
-        json_result["result"] = result_search_dict
+        pattern = re.compile(r"\+?[78][- ]?\d{3}[- ]?\d{3}[- ]?\d{2}[- ]?\d{2}")
+        search_result = df[df["Описание"].str.findall(pattern).apply(bool)]
+        json_result["result"] = json.loads(search_result.to_json(orient="records"))
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
-    except ValueError as val_ex:
-        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
         filename = f"search_by_phone_number.json"
+        save_result_in_json(filename=filename, json_obj=json_result)
+
+
+def search_for_transfers_to_individuals():
+    json_result = {
+        "result": []
+    }
+    try:
+        df = get_df_operations()
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Из files.py не получен DataFrame")
+        pattern = re.compile(r"[А-Я][а-я]+ [А-Я]\.")
+        search_result = df[(df["Категория"] == "Переводы") & (df["Описание"].str.findall(pattern))]
+        json_result["result"] = json.loads(search_result.to_json(orient="records"))
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        filename = f"search_for_transfers_to_individuals.json"
         save_result_in_json(filename=filename, json_obj=json_result)
