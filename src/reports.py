@@ -111,7 +111,7 @@ def spending_workday_weekend(df: pd.DataFrame, date: str | None = None) -> pd.Da
     """
     workday_pays = 0.0
     weekend_pays = 0.0
-    result_df: dict = {"Дни недели": ["Рабочие", "Выходные"], "Средняя сумма платежей": [0.0, 0.0]}
+    result_df: dict = {"Дни недели": ["Рабочие", "Выходные"], "Средняя сумма платежей": [workday_pays, weekend_pays]}
     try:
         if date is None:
             user_date_dt: datetime | None = datetime.now()
