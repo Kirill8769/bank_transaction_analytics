@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 import pandas as pd
 
-from src.config import path_project
+from src.config import PATH_PROJECT
 from src.loggers import logger
 
 
@@ -30,7 +30,7 @@ def saving_to_file(filename: str | None = None) -> Callable:
                     filename_edit = f"{filename}.xlsx"
                 else:
                     filename_edit = f'{func.__name__}_{datetime.now().strftime("%d_%m_%Y_%H_%M_%S")}.xlsx'
-                file_path = os.path.join(path_project, "reports", filename_edit)
+                file_path = os.path.join(PATH_PROJECT, "reports", filename_edit)
                 result.to_excel(file_path, index=False)
                 return result
             except TypeError as type_ex:

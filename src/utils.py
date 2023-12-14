@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import requests
@@ -18,7 +18,7 @@ def check_date(date_checked: str) -> datetime | None:
     Проверяет строку с датой на соответствие формату и возвращает объект datetime.
 
     :param date_checked: Строка с датой в формате YYYY-MM-DD HH:MM:SS.
-    :return: Объект datetime, представляющий дату и время.
+    :return: Объект datetime, представляющий дату и время или None в случае ошибки.
     :raises TypeError: Если передан неверный тип данных в date_checked (ожидается str).
     :raises ValueError: Если передан неверный формат даты (ожидается YYYY-MM-DD HH:MM:SS).
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
@@ -44,8 +44,7 @@ def check_date(date_checked: str) -> datetime | None:
 
 def get_time_of_day() -> str:
     """
-    Фунция вычисляет какое сейчас время суток и формирует
-    приветственное сообщение
+    Фунция вычисляет какое сейчас время суток и формирует приветственное сообщение
 
     :return: Приветственное сообщение
     """
@@ -61,35 +60,28 @@ def get_time_of_day() -> str:
     return message
 
 
-def get_user_operations_by_interval(user_date: str) -> tuple[None | pd.DataFrame, None | pd.Series]:
+def get_df_by_interval(date: str) -> pd.DataFrame | None:
     """
-    Получает операции пользователя из файла, в заданном временном интервале.
+    Формирует операции пользователя из файла, в заданном временном интервале.
 
-    :return: Кортеж из двух элементов: DataFrame с топ-5 транзакциями и Series с общей суммой платежей по картам.
-    :raises TypeError: Если start_date или end_date не являются объектами datetime.
-    :raises ValueError: Если файл с операциями не найден или если возникли проблемы с фильтрацией данных.
+    :return: DataFrame с операциями пользователя с начала месяца и до переданной даты или None в случае ошибки
     """
-
-    result: tuple[None | pd.DataFrame, None | pd.Series] = (None, None)
+    result_df: pd.DataFrame | None = None
     try:
-        end_date = check_date(user_date)
-        if not isinstance(end_date, datetime):
+        user_date = check_date(date)
+        if not isinstance(user_date, datetime):
             raise ValueError("Проблема с переданной датой, смотрите логи")
-        start_date = datetime(end_date.year, end_date.month, 1)
+        start_date = datetime.replace(user_date, day=1)
         df = get_df_operations()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Из files.py не получен DataFrame")
         df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
-        filter_by_date: pd.DataFrame = df[
+        result_df = df[
             (df["Дата операции"] >= start_date)
-            & (df["Дата операции"] <= end_date)
+            & (df["Дата операции"] <= user_date)
             & (df["Сумма платежа"] < 0)
             & (df["Статус"] == "OK")
         ]
-        top_transactions = filter_by_date.sort_values(by="Сумма платежа", ascending=True).head(5)
-        group_num_cards = filter_by_date.groupby(filter_by_date["Номер карты"])
-        sum_pay_cards = group_num_cards["Сумма платежа"].sum()
-        result = (top_transactions, sum_pay_cards)
     except TypeError as type_ex:
         logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
     except ValueError as val_ex:
@@ -97,19 +89,82 @@ def get_user_operations_by_interval(user_date: str) -> tuple[None | pd.DataFrame
     except Exception as ex:
         logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
     finally:
+        return result_df
+
+
+def get_filtered_df(date: str, range_data: str) -> pd.DataFrame | None:
+    """
+    Функция выполняет фильтрацию операций на основе переданной даты и диапазона данных.
+
+    :param date: Дата для фильтрации в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС".
+    :param range_data: Диапазон данных для фильтрации.
+    Возможные значения: "W" (неделя), "M" (месяц), "Y" (год), "ALL" (все).
+    :return: DataFrame с отфильтрованными операциями или None в случае ошибки.
+    """
+    result_df: pd.DataFrame | None = None
+    try:
+        date_dt = check_date(date)
+        if not isinstance(date_dt, datetime):
+            raise ValueError("Проблема с переданной датой, смотрите логи")
+        if not isinstance(range_data, str) or range_data.upper() not in ["W", "M", "Y", "ALL"]:
+            raise ValueError('Передано неверное значение в range_data. Возможные значения: "W", "M", "Y", "ALL"')
+        df = get_df_operations()
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Из files.py не получен DataFrame")
+        df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
+
+        if range_data == "W":
+            weekday = date_dt.weekday()
+            start_week = date_dt - timedelta(days=weekday)
+            end_week = start_week + timedelta(days=6)
+            result_df = df.loc[(df["Дата операции"] >= start_week) & (df["Дата операции"] <= end_week)]
+        elif range_data == "M":
+            result_df = df.loc[
+                (df["Дата операции"].dt.year == date_dt.year) & (df["Дата операции"].dt.month == date_dt.month)
+            ]
+        elif range_data == "Y":
+            result_df = df.loc[df["Дата операции"].dt.year == date_dt.year]
+        else:
+            result_df = df
+    except TypeError as type_ex:
+        logger.error(f"{type_ex.__class__.__name__}: {type_ex}")
+    except ValueError as val_ex:
+        logger.error(f"{val_ex.__class__.__name__}: {val_ex}")
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
+        return result_df
+
+
+def get_list_categories_with_amounts(df_to_handle: pd.Series) -> list | list[dict]:
+    """
+    Функция создает список словарей, в которых каждый словарь содержит информацию о категории и сумме трат по ней.
+
+    :param df_to_handle: Series с данными о суммах трат по категориям.
+    :return: Список словарей с категориями и суммами трат или пустой список в случае ошибки.
+    """
+    result: list | list[dict] = []
+    try:
+        if isinstance(df_to_handle, pd.Series) and not df_to_handle.empty:
+            for category, sum_pay in df_to_handle.items():
+                if isinstance(category, str) and isinstance(sum_pay, float):
+                    result.append({"category": category, "amount": round(abs(sum_pay))})
+    except Exception as ex:
+        logger.debug(f"{ex.__class__.__name__}: {ex}", exc_info=True)
+    finally:
         return result
 
 
-def get_price_stocks_user(user_settings_dict: dict) -> dict[str, float] | None:
+def get_price_stocks_user(user_settings_dict: dict) -> list | list[dict[str, float]]:
     """
     Получает текущие цены акций из S&P 500.
 
     :param user_settings_dict: Словарь с настройками пользователя
-    :return: Словарь с обновленными ценами акций.
+    :return: Список словарей с ценами акций.
     :raises ConnectionError: Если возникает ошибка подключения к API для получения цен акций.
     :raises Exception: Если возникает неожиданная ошибка при обработке данных.
     """
-    result = None
+    result = []
     try:
         if not isinstance(user_settings_dict, dict) or "user_stocks" not in user_settings_dict.keys():
             raise ValueError("Ошибка в переданном объекте с настройками пользователя")
@@ -126,8 +181,7 @@ def get_price_stocks_user(user_settings_dict: dict) -> dict[str, float] | None:
                 raise ConnectionError(f"Ошибка подключения: {status_code}")
             json_data = response.json()
             for stock in json_data["data"]:
-                tickers_stocks[stock["symbol"]] = stock["last"]
-            result = tickers_stocks
+                result.append({"stock": stock["symbol"], "price": stock["last"]})
     except ConnectionError as conn_ex:
         logger.error(f"{conn_ex.__class__.__name__}: {conn_ex}")
     except ValueError as val_ex:
@@ -138,29 +192,26 @@ def get_price_stocks_user(user_settings_dict: dict) -> dict[str, float] | None:
         return result
 
 
-def get_price_currencies_user(user_settings_dict: dict) -> dict[str, float] | None:
+def get_price_currencies_user(user_settings_dict: dict) -> list | list[dict[str, float]]:
     """
     Получает текущие курсы валют.
 
     :param user_settings_dict: Словарь с настройками пользователя
-    :return: Словарь с обновленными курсами валют.
-    :raises ConnectionError: Если возникает ошибка подключения к API для получения курсов валют.
-    :raises Exception: Если возникает неожиданная ошибка при обработке данных.
+    :return: Список словарей с курсами валют.
     """
-    result = None
+    result = []
     try:
         if not isinstance(user_settings_dict, dict) or "user_currencies" not in user_settings_dict.keys():
             raise ValueError("Ошибка в переданном объекте с настройками пользователя")
-        tickers_currencies = {key: 0.0 for key in user_settings_dict["user_currencies"]}
-        if tickers_currencies:
+        user_currency = user_settings_dict["user_currencies"]
+        if user_currency:
             url = "https://www.cbr-xml-daily.ru/daily_json.js"
             response = requests.get(url)
             if not response.status_code == 200:
                 raise ConnectionError("Ошибка подключения")
             currency_info = response.json()
-            for currency in tickers_currencies:
-                tickers_currencies[currency] = currency_info["Valute"][currency]["Value"]
-            result = tickers_currencies
+            for curr in user_currency:
+                result.append({"currency": curr, "rate": currency_info["Valute"][curr]["Value"]})
     except ConnectionError as conn_ex:
         logger.error(f"{conn_ex.__class__.__name__}: {conn_ex}")
     except ValueError as val_ex:
